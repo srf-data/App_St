@@ -1,0 +1,32 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e7]:
+      - generic [ref=e9]: Controle de Estoque e Custos
+      - heading [level=1] [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Gerencie sua
+          - generic [ref=e15]: Producao
+        - generic [ref=e16]: com Inteligencia
+      - paragraph [ref=e17]: Sistema de controle de estoque e precificacao para producao artesanal. Entre abaixo para acessar seu painel.
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - img "St. Solart" [ref=e21]
+        - paragraph [ref=e22]: st.solart
+      - generic [ref=e23]:
+        - heading "Entre com sua Conta" [level=2] [ref=e24]
+        - paragraph [ref=e25]: Por favor, insira seus dados para entrar na sua conta.
+      - generic [ref=e26]:
+        - generic [ref=e27]: Usuario
+        - textbox "Usuario" [ref=e28]:
+          - /placeholder: Digite seu usuario
+      - generic [ref=e29]:
+        - generic [ref=e30]: Senha
+        - textbox "Senha" [ref=e31]:
+          - /placeholder: Digite sua senha
+      - generic [ref=e32]:
+        - generic [ref=e33] [cursor=pointer]:
+          - checkbox "Mostrar senha" [ref=e34]
+          - text: Mostrar senha
+        - link "Esqueceu a senha?" [ref=e35] [cursor=pointer]:
+          - /url: "#"
+      - button "Entrar" [ref=e36]
