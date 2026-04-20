@@ -316,8 +316,10 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
                   tickFormatter={(v) => `R$ ${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`}
                 />
                 <Tooltip 
-                  formatter={(v) => [formatBRL(v), ""]}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                  formatter={(value, name) => [formatBRL(value), name]}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '12px' }} 
+                  itemStyle={{ fontWeight: '600', fontSize: '12px', padding: '2px 0' }}
+                  labelStyle={{ fontWeight: '800', color: '#0D0D0D', marginBottom: '8px', fontSize: '13px', fontFamily: 'Plus Jakarta Sans' }}
                 />
                 <Area type="monotone" name="Entrada" dataKey="entradas" stroke="#8AF1B9" strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" />
                 <Area type="monotone" name="Saída" dataKey="saidas" stroke="#F84910" strokeWidth={2} fillOpacity={1} fill="url(#colorSaidas)" />

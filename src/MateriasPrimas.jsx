@@ -1,13 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { materialSchema, formatZodError } from './utils/validators';
 
 export default function MateriasPrimas({ 
-  insumosList, setInsumosList, fornecedoresList, entradasList, setEntradasList, saidaInsumosList, setSaidaInsumosList, isAddModalOpen, setIsAddModalOpen, searchQuery, dashboardFilter, clearFilter 
+  insumosList, 
+  setInsumosList, 
+  fornecedoresList, 
+  entradasList, 
+  setEntradasList, 
+  saidaInsumosList, 
+  setSaidaInsumosList, 
+  produtosList = [],
+  setProdutosList,
+  isAddModalOpen, 
+  setIsAddModalOpen, 
+  searchQuery, 
+  dashboardFilter, 
+  clearFilter 
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   
   // Escape key listener for modals
   useEffect(() => {
@@ -39,13 +54,10 @@ export default function MateriasPrimas({
 
   const ITEMS_PER_PAGE = 20;
 
-  const validInsumos = insumosList.filter(m => 
-    (fornecedoresList || []).some(f => (f.fantasia || '').toLowerCase().trim() === (m.fornecedor || '').toLowerCase().trim())
-  );
-
-  const filteredInsumos = validInsumos.filter(i => 
+  // Removido o filtro validInsumos para manter integridade com o cascading delete
+  const filteredInsumos = insumosList.filter(i => 
     i.nome.toLowerCase().includes((searchQuery || '').toLowerCase()) || 
-    i.fornecedor.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+    (i.fornecedor || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
     i.id.toString().includes(searchQuery || '')
   );
 
@@ -69,10 +81,33 @@ export default function MateriasPrimas({
   const paginatedInsumos = sortedInsumos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSaveMateriaPrima = () => {
+    const dataToValidate = {
+      nome,
+      fornecedorId,
+      unidade,
+      custo: custo.replace(',', '.'),
+      estoque: estoque,
+    };
+
+    const result = materialSchema.safeParse(dataToValidate);
+
+    if (!result.success) {
+      const errors = formatZodError(result.error);
+      setFormErrors(errors);
+      setNotification({ 
+        title: 'Erro de Validação', 
+        message: 'Por favor, corrija os campos destacados.', 
+        type: 'error' 
+      });
+      return;
+    }
+
+    setFormErrors({});
     const fornecedor = (fornecedoresList || []).find(f => String(f.id) === String(fornecedorId))?.fantasia || '';
     const valorNumerico = parseFloat(custo.replace(',', '.')) || 0;
     const estoqueNum = parseFloat(estoque) || 0;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
     if (editingItem) {
       setInsumosList(insumosList.map(i => i.id === editingItem.id ? { 
         ...i, 
@@ -146,7 +181,15 @@ export default function MateriasPrimas({
       setSaidaInsumosList(prev => prev.filter(s => s.nome !== itemToDelete.nome));
     }
 
-    setNotification({ title: 'Excluído!', message: 'A matéria-prima foi removida com sucesso.', type: 'info' });
+    // 4. Remover da receita de todos os produtos
+    if (setProdutosList) {
+      setProdutosList(prev => prev.map(p => ({
+        ...p,
+        insumos: (p.insumos || []).filter(ins => ins.id !== itemToDelete.id)
+      })));
+    }
+
+    setNotification({ title: 'Excluído!', message: 'A matéria-prima foi removida com sucesso de todo o sistema.', type: 'info' });
     setTimeout(() => setNotification(null), 3000);
     setShowDeleteModal(false);
     setItemToDelete(null);
@@ -168,6 +211,7 @@ export default function MateriasPrimas({
     setFornecedorId(foundForn ? String(foundForn.id) : '');
     setUnidade(item.unidade); setCusto(item.custoUnitario.toString().replace('.', ',')); setEstoque(item.estoqueAtual.toString());
     setImagePreview(item.foto || null);
+    setFormErrors({});
   };
 
   const isFormValid = nome.trim() && fornecedorId && unidade.trim() && custo && estoque;
@@ -406,10 +450,22 @@ export default function MateriasPrimas({
             onMouseDown={e => e.stopPropagation()}
           >
             {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
+              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${
+                notification.type === 'success' ? 'border-green-100 bg-green-50' : 
+                notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' : 
+                notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 
+                'border-red-100 bg-red-50'
+              }`}>
+                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${
+                  notification.type === 'success' ? 'bg-green-500' : 
+                  notification.type === 'warning' ? 'bg-yellow-500' : 
+                  notification.type === 'info' ? 'bg-blue-500' : 
+                  'bg-red-500'
+                }`}>
                    {notification.type === 'success' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                   ) : notification.type === 'warning' ? (
+                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
                    ) : notification.type === 'info' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                    ) : (
@@ -417,8 +473,18 @@ export default function MateriasPrimas({
                    )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
+                  <h4 className={`font-plus-jakarta text-sm font-bold ${
+                    notification.type === 'success' ? 'text-green-800' : 
+                    notification.type === 'warning' ? 'text-yellow-800' : 
+                    notification.type === 'info' ? 'text-blue-800' : 
+                    'text-red-800'
+                  }`}>{notification.title}</h4>
+                  <p className={`font-inter text-xs leading-relaxed ${
+                    notification.type === 'success' ? 'text-green-600' : 
+                    notification.type === 'warning' ? 'text-yellow-600' : 
+                    notification.type === 'info' ? 'text-blue-600' : 
+                    'text-red-600'
+                  }`}>{notification.message}</p>
                 </div>
                 <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
               </div>
@@ -458,8 +524,9 @@ export default function MateriasPrimas({
                   placeholder="Ex: Essência de Alecrim"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                  className={`h-11 w-full rounded-lg border ${formErrors.nome ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                 />
+                {formErrors.nome && <p className="text-[10px] text-red-500 mt-1">{formErrors.nome}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -467,13 +534,14 @@ export default function MateriasPrimas({
                 <select 
                   value={fornecedorId}
                   onChange={(e) => setFornecedorId(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm shadow-inner"
+                  className={`h-11 w-full rounded-lg border ${formErrors.fornecedorId ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm shadow-inner`}
                 >
                   <option value="">Selecione um fornecedor...</option>
                   {(fornecedoresList || []).map(f => (
                     <option key={f.id} value={f.id}>{f.fantasia}</option>
                   ))}
                 </select>
+                {formErrors.fornecedorId && <p className="text-[10px] text-red-500 mt-1">{formErrors.fornecedorId}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -481,7 +549,7 @@ export default function MateriasPrimas({
                 <select 
                   value={unidade}
                   onChange={(e) => setUnidade(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                  className={`h-11 w-full rounded-lg border ${formErrors.unidade ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                 >
                   <option value="">Selecione...</option>
                   <option value="kg">kg</option>
@@ -493,6 +561,7 @@ export default function MateriasPrimas({
                   <option value="pacote">pacote</option>
                   <option value="caixa">caixa</option>
                 </select>
+                {formErrors.unidade && <p className="text-[10px] text-red-500 mt-1">{formErrors.unidade}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -502,8 +571,9 @@ export default function MateriasPrimas({
                   placeholder="Ex: 45,50"
                   value={custo}
                   onChange={(e) => setCusto(e.target.value)}
-                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                  className={`h-11 w-full rounded-lg border ${formErrors.custo ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                 />
+                {formErrors.custo && <p className="text-[10px] text-red-500 mt-1">{formErrors.custo}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -518,7 +588,7 @@ export default function MateriasPrimas({
                     onChange={(e) => setEstoque(e.target.value)}
                     disabled={!!editingItem}
                     title={editingItem ? "Para alterar o estoque, registre uma Entrada ou Saída" : ""}
-                    className={`h-11 w-full rounded-lg border border-[#F0F0F3] px-4 font-inter text-sm outline-none transition-fluid ${editingItem ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAFAFA] focus:border-[#F84910] focus:shadow-sm'}`}
+                    className={`h-11 w-full rounded-lg border ${formErrors.estoque ? 'border-red-500' : 'border-[#F0F0F3]'} px-4 font-inter text-sm outline-none transition-fluid ${editingItem ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAFAFA] focus:border-[#F84910] focus:shadow-sm'}`}
                   />
                   {editingItem && (
                     <div className="absolute top-1/2 right-3 -translate-y-1/2">
@@ -526,6 +596,7 @@ export default function MateriasPrimas({
                     </div>
                   )}
                 </div>
+                {formErrors.estoque && <p className="text-[10px] text-red-500 mt-1">{formErrors.estoque}</p>}
               </div>
 
 

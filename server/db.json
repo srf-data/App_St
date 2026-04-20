@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "nome": "Studio Solart",
+      "email": "admin@studiosolart.com",
+      "senha": "$2b$10$h24LxqsUO3D/abKT3GRWHuqZUhugK.0BfZDQlSlvUXCl5QjKNbaK2",
+      "dataCad": "01/01/2026",
+      "ultimoAcc": "19/04/2026, 21:33:38",
+      "foto": ""
+    }
+  ]
+}

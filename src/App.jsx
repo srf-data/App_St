@@ -26,7 +26,9 @@ function App() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
+  const [isProcessing, setIsProcessing] = useState(false)
   
   const [loginPhase, setLoginPhase] = useState('login')
   const [fakeUsersList, setFakeUsersList] = useState(initialFakeUsers)
@@ -39,58 +41,95 @@ function App() {
   // Load credentials from localStorage
   useEffect(() => {
     const savedEmail = localStorage.getItem('solart_email');
-    const savedPassword = localStorage.getItem('solart_password');
     if (savedEmail) setUsername(savedEmail);
-    if (savedPassword) setPassword(savedPassword);
   }, []);
 
-  const isFormValid = username.trim().length > 0 && password.length > 0;
+  const isFormValid = username.trim().length > 0 && (loginPhase === 'login' ? password.length > 0 : true);
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault()
     setNotification(null)
+    setIsProcessing(true)
 
-    if (loginPhase === 'reset_password') {
-      if (newPassword !== confirmPassword) {
-        setNotification({
-          title: 'Senhas não coincidem',
-          message: 'As senhas digitadas nos campos "Nova Senha" e "Confirmar Senha" devem ser exatamente iguais.'
-        });
-        return;
-      }
-      
-      const user = fakeUsersList.find(u => u.email === username);
-      if (user) {
-         setFakeUsersList(prev => prev.map(u => u.email === username ? { ...u, senha: newPassword } : u));
-         setCurrentUser({ ...user, senha: newPassword });
-         setIsLoggedIn(true);
-      }
-    } else {
-      // Find user by email (username field)
-      const user = fakeUsersList.find(u => u.email === username);
-      
-      if (!user) {
-        setNotification({
-          title: 'Usuário não encontrado',
-          message: 'O e-mail informado não está cadastrado em nossa base. Por favor, verifique ou entre em contato com o suporte.'
-        });
-        return;
-      }
-      
-      if (user.senha !== password) {
-        setNotification({
-          title: 'Senha Incorreta',
-          message: 'A senha inserida não corresponde ao e-mail informado. Por favor, verifique e tente novamente.'
-        });
-        return;
-      }
+    try {
+      if (loginPhase === 'reset_password') {
+        if (newPassword !== confirmPassword) {
+          setNotification({
+            title: 'Senhas não coincidem',
+            message: 'As senhas digitadas nos campos "Nova Senha" e "Confirmar Senha" devem ser exatamente iguais.',
+            type: 'error'
+          });
+          setIsProcessing(false)
+          return;
+        }
 
-      setCurrentUser(user);
-      setIsLoggedIn(true);
+        const response = await fetch('/api/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: username, otp: otpCode.join(''), newPassword })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+          setNotification({ title: 'Sucesso!', message: 'Sua senha foi redefinida com sucesso. Faça login agora.', type: 'success' });
+          setLoginPhase('login');
+          setOtpCode(['', '', '', '', '', '']);
+          setOtpSent(false);
+          setPassword('');
+        } else {
+          setNotification({ title: 'Erro', message: data.message || 'Erro ao redefinir senha.', type: 'error' });
+        }
+      } else {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: username, password })
+        });
 
-      // Save credentials to localStorage
-      localStorage.setItem('solart_email', username);
-      localStorage.setItem('solart_password', password);
+        const data = await response.json();
+
+        if (response.ok) {
+          setCurrentUser(data.user);
+          setIsLoggedIn(true);
+          localStorage.setItem('solart_email', username);
+          // Don't save password for security, just use the token/session
+        } else {
+          setNotification({ title: data.title || 'Erro', message: data.message || 'Verifique suas credenciais.', type: 'error' });
+        }
+      }
+    } catch (error) {
+      setNotification({ title: 'Erro de Conexão', message: 'Não foi possível conectar ao servidor.', type: 'error' });
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  async function handleSendOTP() {
+    if (!username) {
+       setNotification({ title: 'Atenção', message: 'Por favor, digite seu e-mail/usuário primeiro.' });
+       return;
+    }
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOtpSent(true);
+        setNotification({ 
+          title: 'Código Enviado!', 
+          message: `Enviamos um código para seu e-mail. ${data.previewUrl ? `[DEBUG] Link do e-mail: ${data.previewUrl}` : ''}` 
+        });
+      } else {
+        setNotification({ title: 'Erro', message: data.message });
+      }
+    } catch (e) {
+      setNotification({ title: 'Erro', message: 'Erro ao enviar código.' });
+    } finally {
+      setIsProcessing(false);
     }
   }
 
@@ -100,8 +139,7 @@ function App() {
         onLogout={() => {
           setIsLoggedIn(false);
           setCurrentUser(null);
-          setUsername('');
-          setPassword('');
+          // keep email in field for convenience
         }} 
         currentUser={currentUser}
         fakeUsersList={fakeUsersList}
@@ -169,14 +207,21 @@ function App() {
             </div>
 
             {notification && (
-              <div className="fixed bottom-8 left-8 z-[100] flex w-full max-w-[540px] items-start gap-4 rounded-xl border border-red-100 bg-white p-6 shadow-[0_12px_45px_rgba(0,0,0,0.1)] animate-in slide-in-from-left-10 duration-500 overflow-hidden">
-                <div className="absolute top-0 left-0 h-full w-1.5 bg-red-500"></div>
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 mt-0.5">
-                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+              <div className={`fixed bottom-8 left-8 z-[100] flex w-full max-w-[540px] items-start gap-4 rounded-xl border bg-white p-6 shadow-[0_12px_45px_rgba(0,0,0,0.1)] animate-in slide-in-from-left-10 duration-500 overflow-hidden ${notification.type === 'success' ? 'border-green-100' : 'border-red-100'}`}>
+                <div className={`absolute top-0 left-0 h-full w-1.5 ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <div className={`flex size-6 shrink-0 items-center justify-center rounded-full mt-0.5 ${notification.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                   {notification.type === 'success' ? (
+                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                   ) : (
+                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                   )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1 pr-4 text-left">
                   <h4 className="font-plus-jakarta text-sm font-bold text-[#0D0D0D]">{notification.title}</h4>
                   <p className="font-inter text-[13px] text-[#606060] leading-relaxed font-medium">{notification.message}</p>
+                  {notification.message.includes('[DEBUG]') && (
+                     <a href={notification.message.split('[DEBUG] Link do e-mail: ')[1]} target="_blank" rel="noreferrer" className="text-blue-500 underline text-xs mt-2 block">Ver E-mail de Teste</a>
+                  )}
                 </div>
                 <button 
                   type="button"
@@ -316,7 +361,7 @@ function App() {
           <div className="relative flex w-full max-w-[500px] flex-col items-center gap-8 rounded-lg border border-[#F0F0F3] bg-white p-8 shadow-2xl">
             {/* Close Button */}
             <button 
-              onClick={() => setIsForgotModalOpen(false)}
+              onClick={() => { setIsForgotModalOpen(false); setOtpSent(false); }}
               className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full text-[#606060] transition hover:bg-gray-100"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -326,65 +371,87 @@ function App() {
             </button>
 
             {/* Email Icon / Banner */}
-            <div className="flex size-[54px] items-center justify-center rounded-full bg-[rgba(248,73,16,0.1)] text-[#F84910]">
+            <div className={`flex size-[54px] items-center justify-center rounded-full ${otpSent ? 'bg-[rgba(54,186,111,0.1)] text-[#36BA6F]' : 'bg-[rgba(248,73,16,0.1)] text-[#F84910]'}`}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                <polyline points="22,6 12,13 2,6"></polyline>
+                {otpSent ? <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path> : <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>}
+                {otpSent ? <polyline points="22 4 12 14.01 9 11.01"></polyline> : <polyline points="22,6 12,13 2,6"></polyline>}
               </svg>
             </div>
 
-            <div className="flex flex-col items-center gap-2 text-center">
-              <h3 className="font-plus-jakarta text-xl font-bold text-[#0D0D0D]">Verifique seu E-mail</h3>
-              <p className="max-w-[436px] font-plus-jakarta text-sm leading-snug text-[#0D0D0D]">
-                Por favor, insira o código de 6 dígitos que enviamos para o e-mail cadastrado.
-              </p>
-            </div>
+            {!otpSent ? (
+              <>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <h3 className="font-plus-jakarta text-xl font-bold text-[#0D0D0D]">Recuperação de Senha</h3>
+                  <p className="max-w-[436px] font-plus-jakarta text-sm leading-snug text-[#606060]">
+                    Identificamos sua conta pelo e-mail <strong>{username || 'informado'}</strong>. Deseja receber um código de validação?
+                  </p>
+                </div>
 
-            <div className="flex w-full max-w-[436px] items-center justify-between gap-2">
-              {otpCode.map((digit, idx) => (
-                <input
-                  key={idx}
-                  type="text"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => {
-                    const newOtp = [...otpCode];
-                    // Allowing any alphanumeric to debug if num-lock is an issue, but mostly ensuring digits
-                    const val = e.target.value.replace(/[^0-9]/g, '');
-                    newOtp[idx] = val;
-                    setOtpCode(newOtp);
-                    if (val && idx < 5) {
-                      document.getElementById(`otp-input-${idx + 1}`).focus();
-                    }
+                <button 
+                  type="button"
+                  onClick={handleSendOTP}
+                  disabled={isProcessing || !username}
+                  className={`h-12 w-full max-w-[436px] rounded-full font-plus-jakarta text-base font-semibold transition-all duration-300 ${
+                    !isProcessing && username 
+                    ? 'bg-[#0D0D0D] text-white cursor-pointer hover:opacity-90 shadow-lg' 
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isProcessing ? 'Enviando...' : 'Enviar Código para E-mail'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <h3 className="font-plus-jakarta text-xl font-bold text-[#0D0D0D]">Verifique seu E-mail</h3>
+                  <p className="max-w-[436px] font-plus-jakarta text-sm leading-snug text-[#0D0D0D]">
+                    Por favor, insira o código de 6 dígitos que enviamos para o seu e-mail.
+                  </p>
+                </div>
+
+                <div className="flex w-full max-w-[436px] items-center justify-between gap-2">
+                  {otpCode.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      type="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => {
+                        const newOtp = [...otpCode];
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        newOtp[idx] = val;
+                        setOtpCode(newOtp);
+                        if (val && idx < 5) {
+                          document.getElementById(`otp-input-${idx + 1}`).focus();
+                        }
+                      }}
+                      id={`otp-input-${idx}`}
+                      className="h-[64px] w-[66px] rounded-lg border border-[#F0F0F3] bg-white text-center font-plus-jakarta text-3xl font-bold text-[#f84910] shadow-sm outline-none transition focus:border-[#F84910] focus:ring-1 focus:ring-[#F84910]"
+                    />
+                  ))}
+                </div>
+
+                <p className="font-plus-jakarta text-sm text-[#0D0D0D]">
+                  Não recebeu o código? <span onClick={handleSendOTP} className="cursor-pointer font-semibold text-[#F84910] hover:underline">{isProcessing ? 'Reenviando...' : 'Reenviar código'}</span>
+                </p>
+
+                <button 
+                  type="button"
+                  disabled={!otpCode.every(d => d !== '')}
+                  onClick={() => {
+                    setIsForgotModalOpen(false);
+                    setLoginPhase('reset_password');
                   }}
-                  id={`otp-input-${idx}`}
-                  className="h-[64px] w-[66px] rounded-lg border border-[#F0F0F3] bg-white text-center font-plus-jakarta text-3xl font-bold text-[#f84910] shadow-sm outline-none transition focus:border-[#F84910] focus:ring-1 focus:ring-[#F84910]"
-                />
-              ))}
-            </div>
-
-            <p className="font-plus-jakarta text-sm text-[#0D0D0D]">
-              Não recebeu o código? <span className="cursor-pointer font-semibold text-[#F84910] hover:underline">Reenviar código (0:48)</span>
-            </p>
-
-            <button 
-              type="button"
-              disabled={!otpCode.every(d => d !== '')}
-              onClick={() => {
-                if (otpCode.every(d => d !== '')) {
-                  setIsForgotModalOpen(false);
-                  setLoginPhase('reset_password');
-                  setOtpCode(['', '', '', '', '', '']); // clear the code
-                }
-              }}
-              className={`h-12 w-full max-w-[436px] rounded-full font-plus-jakarta text-base font-semibold transition-all duration-300 ${
-                otpCode.every(d => d !== '') 
-                ? 'bg-[linear-gradient(90deg,#F84910_0%,#FF6838_100%)] text-white cursor-pointer hover:opacity-90 shadow-[0_0_15px_rgba(248,73,16,0.3)]' 
-                : 'bg-[rgba(139,139,139,0.2)] text-[#8B8B8B] cursor-not-allowed border-none'
-              }`}
-            >
-              Confirmar Código
-            </button>
+                  className={`h-12 w-full max-w-[436px] rounded-full font-plus-jakarta text-base font-semibold transition-all duration-300 ${
+                    otpCode.every(d => d !== '') 
+                    ? 'bg-[linear-gradient(90deg,#F84910_0%,#FF6838_100%)] text-white cursor-pointer hover:opacity-90 shadow-[0_0_15px_rgba(248,73,16,0.3)]' 
+                    : 'bg-[rgba(139,139,139,0.2)] text-[#8B8B8B] cursor-not-allowed border-none'
+                  }`}
+                >
+                  Confirmar Código
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

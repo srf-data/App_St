@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { productSchema, formatZodError } from './utils/validators';
 
 export default function Produtos({ 
   produtosList, setProdutosList, insumosList, fornecedoresList, entradasList, setEntradasList, saidasList, setSaidasList, isAddModalOpen, setIsAddModalOpen, searchQuery, dashboardFilter, clearFilter 
@@ -52,6 +53,7 @@ export default function Produtos({
 
   // Notification State
   const [notification, setNotification] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
 
   const ITEMS_PER_PAGE = 20;
 
@@ -158,10 +160,29 @@ export default function Produtos({
   };
 
   const handleSaveProduto = () => {
-    if (!nomeProduto.trim()) return;
+    const dataToValidate = {
+      nome: nomeProduto,
+      qtd: qtdeInicial,
+    };
+
+    const result = productSchema.safeParse(dataToValidate);
+
+    if (!result.success) {
+      const errors = formatZodError(result.error);
+      setFormErrors(errors);
+      setNotification({ 
+        title: 'Erro de Validação', 
+        message: 'Por favor, corrija os erros do produto.', 
+        type: 'error' 
+      });
+      return;
+    }
+
+    setFormErrors({});
     const totalCusto = insumosAdicionados.reduce((sum, i) => sum + (i.qtde * i.custoUnitario), 0);
     const vendaSugerida = totalCusto * 2.2; // Custo + 120%
     const qtdNum = parseFloat(qtdeInicial) || 0;
+    
     if (editingProduto) {
       setProdutosList(produtosList.map(p => p.id === editingProduto.id ? { 
         ...p, 
@@ -244,6 +265,7 @@ export default function Produtos({
     setNomeProduto(produto.nome);
     setQtdeInicial(produto.qtd || 0);
     setInsumosAdicionados(produto.insumos || []); 
+    setFormErrors({});
   };
 
   const isFormValid = nomeProduto.trim().length > 0;
@@ -498,10 +520,22 @@ export default function Produtos({
           >
             
             {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
+              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${
+                notification.type === 'success' ? 'border-green-100 bg-green-50' : 
+                notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' : 
+                notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 
+                'border-red-100 bg-red-50'
+              }`}>
+                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${
+                  notification.type === 'success' ? 'bg-green-500' : 
+                  notification.type === 'warning' ? 'bg-yellow-500' : 
+                  notification.type === 'info' ? 'bg-blue-500' : 
+                  'bg-red-500'
+                }`}>
                    {notification.type === 'success' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                   ) : notification.type === 'warning' ? (
+                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
                    ) : notification.type === 'info' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                    ) : (
@@ -509,8 +543,18 @@ export default function Produtos({
                    )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
+                  <h4 className={`font-plus-jakarta text-sm font-bold ${
+                    notification.type === 'success' ? 'text-green-800' : 
+                    notification.type === 'warning' ? 'text-yellow-800' : 
+                    notification.type === 'info' ? 'text-blue-800' : 
+                    'text-red-800'
+                  }`}>{notification.title}</h4>
+                  <p className={`font-inter text-xs leading-relaxed ${
+                    notification.type === 'success' ? 'text-green-600' : 
+                    notification.type === 'warning' ? 'text-yellow-600' : 
+                    notification.type === 'info' ? 'text-blue-600' : 
+                    'text-red-600'
+                  }`}>{notification.message}</p>
                 </div>
                 <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
               </div>
@@ -536,7 +580,8 @@ export default function Produtos({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="font-plus-jakarta text-sm font-semibold text-[#606060]">Nome do Produto</label>
-                <input type="text" placeholder="Ex: Vela Aromática de Alecrim" value={nomeProduto} onChange={(e) => setNomeProduto(e.target.value)} className="h-12 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-base text-[#0D0D0D] outline-none focus:border-[#F84910] transition-fluid" />
+                <input type="text" placeholder="Ex: Vela Aromática de Alecrim" value={nomeProduto} onChange={(e) => setNomeProduto(e.target.value)} className={`h-12 w-full rounded-lg border ${formErrors.nome ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-base text-[#0D0D0D] outline-none focus:border-[#F84910] transition-fluid`} />
+                {formErrors.nome && <p className="text-xs text-red-500 mt-1">{formErrors.nome}</p>}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="font-plus-jakarta text-sm font-semibold text-[#606060]">
@@ -550,7 +595,7 @@ export default function Produtos({
                     onChange={(e) => setQtdeInicial(e.target.value)} 
                     disabled={!!editingProduto}
                     title={editingProduto ? "Para alterar a quantidade, registre uma Produção (Entrada) ou Venda (Saída)" : ""}
-                    className={`h-12 w-full rounded-lg border border-[#F0F0F3] px-4 font-inter text-base text-center outline-none transition-fluid ${editingProduto ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAFAFA] text-[#0D0D0D] focus:border-[#F84910]'}`} 
+                    className={`h-12 w-full rounded-lg border ${formErrors.qtd ? 'border-red-500' : 'border-[#F0F0F3]'} px-4 font-inter text-base text-center outline-none transition-fluid ${editingProduto ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-[#FAFAFA] text-[#0D0D0D] focus:border-[#F84910]'}`} 
                   />
                   {editingProduto && (
                     <div className="absolute top-1/2 right-3 -translate-y-1/2">
@@ -558,6 +603,7 @@ export default function Produtos({
                     </div>
                   )}
                 </div>
+                {formErrors.qtd && <p className="text-xs text-red-500 mt-1">{formErrors.qtd}</p>}
               </div>
             </div>
 

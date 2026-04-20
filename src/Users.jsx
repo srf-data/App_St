@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { userSchema, formatZodError } from './utils/validators';
 import PaginaInicial from './PaginaInicial';
 import Produtos from './Produtos';
 import Entradas from './Entradas';
@@ -6,7 +7,7 @@ import MateriasPrimas from './MateriasPrimas';
 import Fornecedores from './Fornecedores';
 import Saidas from './Saidas';
 import logoUrl from './assets/logo-pagina.png';
-import studioSolartLogo from './assets/studio-solart.jpg'; 
+import studioSolartLogo from './assets/studio-solart.jpg';
 import avatarDefault from './assets/avatar-tabela.svg';
 
 const initialInsumos = [];
@@ -84,6 +85,9 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = React.useRef(null);
   const [newNome, setNewNome] = useState('');
+  const [newConfirmEmail, setNewConfirmEmail] = useState('');
+  const [newConfirmSenha, setNewConfirmSenha] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [editingUser, setEditingUser] = useState(null);
   const [notification, setNotification] = useState(null);
 
@@ -121,9 +125,31 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
   };
 
   const handleSaveUser = () => {
-    if (!newNome || !newEmail || !newSenha) return;
+    const dataToValidate = {
+      nome: newNome,
+      email: newEmail,
+      confirmEmail: newConfirmEmail,
+      senha: newSenha,
+      confirmSenha: newConfirmSenha,
+    };
+
+    const result = userSchema.safeParse(dataToValidate);
+
+    if (!result.success) {
+      const errors = formatZodError(result.error);
+      setFormErrors(errors);
+      setNotification({
+        title: 'Erro de Validação',
+        message: 'Por favor, corrija os erros no formulário.',
+        type: 'error'
+      });
+      return;
+    }
+
+    setFormErrors({});
     const today = new Date();
     const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
     if (editingUser) {
       setFakeUsersList(prev => prev.map(u => u.id === editingUser.id ? { ...u, nome: newNome, email: newEmail, senha: newSenha, foto: imagePreview || u.foto } : u));
       setNotification({ title: 'Sucesso!', message: 'Usuário atualizado com sucesso!', type: 'success' });
@@ -147,9 +173,9 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
       setTimeout(() => { setNotification(null); setIsAddingUser(false); }, 1500);
       setCurrentPage(1);
     }
-    
+
     setIsAddingUser(false);
-    setNewNome(''); setNewEmail(''); setNewSenha(''); setNewImage(null); setImagePreview(null);
+    setNewNome(''); setNewEmail(''); setNewSenha(''); setNewConfirmEmail(''); setNewConfirmSenha(''); setNewImage(null); setImagePreview(null);
   };
 
   const handleDeleteUser = (user) => {
@@ -174,9 +200,12 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
     setEditingUser(user);
     setNewNome(user.nome);
     setNewEmail(user.email);
+    setNewConfirmEmail(user.email);
     setNewSenha(user.senha);
+    setNewConfirmSenha(user.senha);
     setImagePreview(user.foto);
     setIsAddingUser(true);
+    setFormErrors({});
   };
 
   // Domain data states
@@ -186,7 +215,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
   const [saidasList, setSaidasList] = useState(initialSaidas);
   const [saidaInsumosList, setSaidaInsumosList] = useState([]);
   const [fornecedoresList, setFornecedoresList] = useState(initialFornecedores);
-  
+
   // Dashboard Navigation Filters
   const [dashboardFilter, setDashboardFilter] = useState(null);
 
@@ -225,9 +254,9 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 z-50 flex h-full flex-col justify-between border-r border-[#F0F0F3] bg-white py-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[270px] px-6 max-[860px]:shadow-2xl' : 'w-[88px] px-4'}`}>
-        
+
         {/* Floating Toggle Arrow (on aside, outside overflow-hidden) */}
-        <button 
+        <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{ WebkitTapHighlightColor: 'transparent', outline: 'none' }}
           className="absolute -right-[13px] top-[26px] flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-[#F0F0F3] bg-white shadow-md transition-all duration-300 hover:scale-105 z-20 text-[#606060]"
@@ -238,7 +267,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
         </button>
 
         <div className="flex flex-col gap-4 overflow-hidden relative">
-          
+
           <div className="flex h-[52px] w-full items-center overflow-hidden">
             <div className="flex items-center gap-0 overflow-hidden">
               <img src={logoUrl} alt="Logo" className="size-[52px] shrink-0" />
@@ -252,8 +281,8 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
             {menuItems.map((item, index) => {
               if (item.type === 'section') {
                 return (
-                  <h3 
-                    key={index} 
+                  <h3
+                    key={index}
                     className={`mt-6 px-2 font-inter text-xs sm:text-sm font-[1000] font-medium tracking-wider text-[#D7D7D7] transition-all duration-300 overflow-hidden whitespace-nowrap ${isSidebarOpen ? 'max-h-10 opacity-100' : 'max-h-0 opacity-0 mb-[-24px] pr-0'}`}
                   >
                     {item.title}
@@ -263,8 +292,8 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
 
               const isActive = activeMenu === item.title;
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   onClick={() => {
                     setActiveMenu(item.title);
                     setDashboardFilter(null);
@@ -316,42 +345,42 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-col gap-2 transition-all">
               <h1 className="font-plus-jakarta text-[32px] font-extrabold leading-[40px] text-[#0D0D0D]">
-                {activeMenu === 'Página Inicial' 
-                 ? 'Dashboard' 
-                 : activeMenu === 'Usuários' 
-                 ? 'Gestão de Usuários' 
-                 : activeMenu === 'Produtos' 
-                 ? 'Gestão de Produtos'
-                 : activeMenu === 'Entradas'
-                 ? 'Registro de Entradas'
-                 : activeMenu === 'Saídas'
-                 ? 'Gestão de Saídas'
-                 : `Gestão de ${activeMenu}`}
+                {activeMenu === 'Página Inicial'
+                  ? 'Dashboard'
+                  : activeMenu === 'Usuários'
+                    ? 'Gestão de Usuários'
+                    : activeMenu === 'Produtos'
+                      ? 'Gestão de Produtos'
+                      : activeMenu === 'Entradas'
+                        ? 'Registro de Entradas'
+                        : activeMenu === 'Saídas'
+                          ? 'Gestão de Saídas'
+                          : `Gestão de ${activeMenu}`}
               </h1>
               <p className="font-inter text-sm font-medium text-[#606060] leading-[17px]">
                 {activeMenu === 'Página Inicial'
-                 ? 'Monitore desempenho, controle custos e tome decisões estratégicas com base nos dados do seu negócio.'
-                 : activeMenu === 'Usuários' 
-                 ? 'Gerencie acessos, defina níveis de permissão e mantenha o controle total sobre a equipe.'
-                 : activeMenu === 'Produtos'
-                 ? 'Acompanhe seu fluxo de produtos detalhado e calcule insumos instantaneamente.'
-                 : activeMenu === 'Entradas'
-                 ? 'Controle todas as movimentações de entrada e garanta precisão no seu estoque.'
-                 : activeMenu === 'Matérias-primas'
-                 ? 'Visualize e gerencie todos os insumos utilizados na sua produção de forma organizada e eficiente.'
-                 : activeMenu === 'Fornecedores'
-                 ? 'Gerencie seus fornecedores, contatos e condições de compra centralizadamente.'
-                 : activeMenu === 'Saídas'
-                 ? 'Registro Organizado de Saídas e controle de entregas.'
-                 : 'Módulo em construção...'}
+                  ? 'Monitore desempenho, controle custos e tome decisões estratégicas com base nos dados do seu negócio.'
+                  : activeMenu === 'Usuários'
+                    ? 'Gerencie acessos, defina níveis de permissão e mantenha o controle total sobre a equipe.'
+                    : activeMenu === 'Produtos'
+                      ? 'Acompanhe seu fluxo de produtos detalhado e calcule insumos instantaneamente.'
+                      : activeMenu === 'Entradas'
+                        ? 'Controle todas as movimentações de entrada e garanta precisão no seu estoque.'
+                        : activeMenu === 'Matérias-primas'
+                          ? 'Visualize e gerencie todos os insumos utilizados na sua produção de forma organizada e eficiente.'
+                          : activeMenu === 'Fornecedores'
+                            ? 'Gerencie seus fornecedores, contatos e condições de compra centralizadamente.'
+                            : activeMenu === 'Saídas'
+                              ? 'Registro Organizado de Saídas e controle de entregas.'
+                              : 'Módulo em construção...'}
               </p>
             </div>
             {activeMenu !== 'Página Inicial' && (
               <div className="flex items-center gap-2 shrink-0">
                 <div className={`relative flex items-center transition-all duration-500 ease-in-out ${isSearchExpanded ? 'w-[200px] h-[32px] rounded-lg border border-[#D7D7D740] border-opacity-20 bg-white' : 'w-[32px] h-[32px] bg-transparent'}`}>
                   {isSearchExpanded && (
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       autoFocus
                       placeholder="Digite aqui..."
                       value={searchQuery}
@@ -363,7 +392,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                       className="absolute inset-0 h-full w-[calc(100%-32px)] bg-transparent pl-3 pr-2 text-xs border-none font-inter text-[#0D0D0D] placeholder:text-[#606060] focus:ring-0 focus:outline-none"
                     />
                   )}
-                  <span 
+                  <span
                     role="button"
                     onClick={() => setIsSearchExpanded(!isSearchExpanded)}
                     style={{ WebkitTapHighlightColor: 'transparent', outline: 'none', boxShadow: 'none', appearance: 'none' }}
@@ -376,15 +405,15 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                   </span>
                 </div>
 
-                <button 
-                  onClick={() => 
-                    activeMenu === 'Usuários' ? setIsAddingUser(!isAddingUser) : 
-                    activeMenu === 'Produtos' ? setIsAddingProduto(true) : 
-                    activeMenu === 'Entradas' ? setIsAddingEntrada(true) : 
-                    activeMenu === 'Matérias-primas' ? setIsAddingMateriaPrima(true) :
-                    activeMenu === 'Fornecedores' ? setIsAddingFornecedor(true) :
-                    activeMenu === 'Saídas' ? setIsAddingSaida(true) :
-                    setActiveMenu('Entradas')
+                <button
+                  onClick={() =>
+                    activeMenu === 'Usuários' ? setIsAddingUser(!isAddingUser) :
+                      activeMenu === 'Produtos' ? setIsAddingProduto(true) :
+                        activeMenu === 'Entradas' ? setIsAddingEntrada(true) :
+                          activeMenu === 'Matérias-primas' ? setIsAddingMateriaPrima(true) :
+                            activeMenu === 'Fornecedores' ? setIsAddingFornecedor(true) :
+                              activeMenu === 'Saídas' ? setIsAddingSaida(true) :
+                                setActiveMenu('Entradas')
                   }
                   style={{ WebkitTapHighlightColor: 'transparent', outline: 'none' }}
                   className="flex h-[34px] items-center justify-center gap-2 rounded-lg bg-[linear-gradient(149deg,#F84910_0%,#FF6838_100%)] px-4 font-plus-jakarta text-sm font-semibold text-white shadow-[0_0_15px_rgba(248,73,16,0.3)] transition-fluid hover-scale cursor-pointer"
@@ -399,16 +428,16 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
           </div>
 
           {activeMenu === 'Página Inicial' ? (
-            <PaginaInicial 
-               produtos={produtosList} 
-               insumos={insumosList} 
-               entradas={entradasList} 
-               saidas={saidasList} 
-               saidasInsumos={saidaInsumosList}
-               onNavigate={(menu, filter) => {
-                 setActiveMenu(menu);
-                 setDashboardFilter(filter);
-               }} 
+            <PaginaInicial
+              produtos={produtosList}
+              insumos={insumosList}
+              entradas={entradasList}
+              saidas={saidasList}
+              saidasInsumos={saidaInsumosList}
+              onNavigate={(menu, filter) => {
+                setActiveMenu(menu);
+                setDashboardFilter(filter);
+              }}
             />
           ) : activeMenu === 'Usuários' ? (
             <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative anim-fade-in">
@@ -442,86 +471,131 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                     </div>
 
                     {notification && (
-                      <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                        <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
-                           {notification.type === 'success' ? (
-                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                           ) : notification.type === 'info' ? (
-                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                           ) : (
-                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                           )}
+                      <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' :
+                          notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' :
+                            notification.type === 'info' ? 'border-blue-100 bg-blue-50' :
+                              'border-red-100 bg-red-50'
+                        }`}>
+                        <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' :
+                            notification.type === 'warning' ? 'bg-yellow-500' :
+                              notification.type === 'info' ? 'bg-blue-500' :
+                                'bg-red-500'
+                          }`}>
+                          {notification.type === 'success' ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          ) : notification.type === 'warning' ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                          ) : notification.type === 'info' ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                          )}
                         </div>
                         <div className="flex flex-1 flex-col gap-1">
-                          <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                          <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
+                          <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' :
+                              notification.type === 'warning' ? 'text-yellow-800' :
+                                notification.type === 'info' ? 'text-blue-800' :
+                                  'text-red-800'
+                            }`}>{notification.title}</h4>
+                          <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' :
+                              notification.type === 'warning' ? 'text-yellow-600' :
+                                notification.type === 'info' ? 'text-blue-600' :
+                                  'text-red-600'
+                            }`}>{notification.message}</p>
                         </div>
                         <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                       </div>
                     )}
-                    <div className="flex w-full items-center justify-between px-2 font-inter text-[#606060] text-xs">
-                      <div className="w-[80px] text-center text-[#8B8B8B] font-medium">...</div>
-                      <div className="w-[75px] flex justify-center relative">
-                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
-                        <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center p-0.5 rounded-lg shrink-0 w-[50px] h-[34px] border border-dashed border-[#F84910] hover:bg-[#F84910]/10 transition group overflow-hidden" title={newImage ? newImage.name : "Upload"}>
-                          {imagePreview ? (
-                            <img src={imagePreview} className="w-full h-full object-cover rounded" />
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F84910" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                          )}
-                        </button>
-                      </div>
-                      <div className="flex-1 px-2">
-                        <input type="text" placeholder="Digite o nome..." value={newNome} onChange={e => setNewNome(e.target.value)} className="w-full h-[36px] bg-white border border-[#F0F0F3] rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300" />
-                      </div>
-                      <div className="flex-1 px-2">
-                        <input type="email" placeholder="Digite o e-mail..." value={newEmail} onChange={e => setNewEmail(e.target.value)} className="w-full h-[36px] bg-white border border-[#F0F0F3] rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300" />
-                      </div>
-                      <div className="w-[140px]">
-                        <input type="text" placeholder="Digite a senha" value={newSenha} onChange={e => setNewSenha(e.target.value)} className="w-full h-[36px] bg-white border border-[#F0F0F3] rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300" />
-                      </div>
-                      <div className="w-[150px] flex justify-center">
-                        <div className="flex h-[32px] w-[90%] items-center justify-center bg-[rgba(139,139,139,0.2)] rounded-lg text-[#8B8B8B] font-medium">---</div>
-                      </div>
-                      <div className="w-[150px] flex justify-center">
-                        <div className="flex h-[32px] w-[90%] items-center justify-center bg-[rgba(139,139,139,0.2)] rounded-lg text-[#8B8B8B] font-medium">---</div>
-                      </div>
-                    </div>
-                    <div className="flex w-full justify-between px-4">
-                      <div>
-                        {editingUser && (
-                          <button 
-                            onClick={() => setShowDeleteConfirm(true)} 
-                            className="flex h-[36px] items-center gap-2 px-4 rounded-lg font-plus-jakarta text-sm font-bold text-[#BA0000] hover:bg-red-50 transition-fluid cursor-pointer"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"></path></svg>
-                            Excluir Usuário
+                    <div className="flex flex-col gap-6">
+                      {/* Primeira Linha: Nome, E-mail, Senha */}
+                      <div className="flex w-full items-start justify-between px-2 gap-4">
+                        <div className="w-[80px]" />
+                        <div className="w-[75px] flex flex-col items-center">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 uppercase">Foto</label>
+                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+                          <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center p-0.5 rounded-lg shrink-0 w-[50px] h-[34px] border border-dashed border-[#F84910] hover:bg-[#F84910]/10 transition group overflow-hidden" title={newImage ? newImage.name : "Upload"}>
+                            {imagePreview ? (
+                              <img src={imagePreview} className="w-full h-full object-cover rounded" />
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F84910" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            )}
                           </button>
-                        )}
+                        </div>
+
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase">Nome Completo</label>
+                          <input type="text" placeholder="Nome" value={newNome} onChange={e => setNewNome(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.nome ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300`} />
+                          {formErrors.nome && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.nome}</p>}
+                        </div>
+
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase">E-mail</label>
+                          <input type="email" placeholder="E-mail" value={newEmail} onChange={e => setNewEmail(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.email ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300`} />
+                          {formErrors.email && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.email}</p>}
+                        </div>
+
+                        <div className="w-[140px]">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Senha</label>
+                          <input type="text" placeholder="Senha" value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          {formErrors.senha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.senha}</p>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={() => {
-                            setIsAddingUser(false);
-                            setEditingUser(null);
-                            setNewNome(''); setNewEmail(''); setNewSenha(''); setNewImage(null); setImagePreview(null);
-                          }} 
-                          className="font-inter text-sm font-medium text-[#606060] hover:text-[#0D0D0D] transition-colors mr-2 cursor-pointer"
-                        >
-                          Cancelar
-                        </button>
-                        <button 
-                          onClick={handleSaveUser} 
-                          onMouseDown={() => {
-                            if (!isFormValid) {
-                              setNotification({ title: 'Campos Obrigatórios', message: 'Por favor, preencha o Nome, E-mail e Senha do usuário.', type: 'error' });
-                            }
-                          }}
-                          className={`flex h-[34px] items-center gap-2 px-4 rounded-lg transition-all duration-500 ease-in-out ${isFormValid ? 'bg-[#36BA6F] hover:bg-[#2e9c5d]' : 'bg-[rgba(139,139,139,0.2)] hover:bg-gray-200'} cursor-pointer`}
-                        >
-                          <span className={`font-plus-jakarta text-sm font-semibold transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}>Salvar e Atualizar</span>
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        </button>
+
+                      {/* Segunda Linha: Confirmações */}
+                      <div className="flex w-full items-start justify-between px-2 gap-4">
+                        <div className="w-[80px]" />
+                        <div className="w-[75px]" />
+
+                        <div className="flex-1 invisible">
+                          <label className="block text-[10px] mb-2">Spacer</label>
+                          <div className="h-[36px]" />
+                        </div>
+
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-medium text-[#606060] mb-2 ml-1 uppercase opacity-70">Confirmar E-mail</label>
+                          <input type="email" placeholder="Confirmar E-mail" value={newConfirmEmail} onChange={e => setNewConfirmEmail(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmEmail ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300`} />
+                          {formErrors.confirmEmail && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.confirmEmail}</p>}
+                        </div>
+
+                        <div className="w-[140px]">
+                          <label className="block text-[10px] font-medium text-[#606060] mb-2 ml-1 uppercase text-center opacity-70">Confirmar Senha</label>
+                          <input type="text" placeholder="Confirmar Senha" value={newConfirmSenha} onChange={e => setNewConfirmSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmSenha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          {formErrors.confirmSenha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.confirmSenha}</p>}
+                        </div>
+                      </div>
+
+                      <div className="flex w-full justify-between px-4 mt-2">
+                        <div>
+                          {editingUser && (
+                            <button
+                              onClick={() => setShowDeleteConfirm(true)}
+                              className="flex h-[36px] items-center gap-2 px-4 rounded-lg font-plus-jakarta text-sm font-bold text-[#BA0000] hover:bg-red-50 transition-fluid cursor-pointer"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"></path></svg>
+                              Excluir Usuário
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setIsAddingUser(false);
+                              setEditingUser(null);
+                              setFormErrors({});
+                              setNewNome(''); setNewEmail(''); setNewSenha(''); setNewConfirmEmail(''); setNewConfirmSenha(''); setNewImage(null); setImagePreview(null);
+                            }}
+                            className="font-inter text-sm font-medium text-[#606060] hover:text-[#0D0D0D] transition-colors mr-2 cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={handleSaveUser}
+                            className={`flex h-[34px] items-center gap-2 px-4 rounded-lg transition-all duration-500 ease-in-out ${isFormValid ? 'bg-[#36BA6F] hover:bg-[#2e9c5d]' : 'bg-[rgba(139,139,139,0.2)] hover:bg-gray-200'} cursor-pointer`}
+                          >
+                            <span className={`font-plus-jakarta text-sm font-semibold transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}>Salvar e Atualizar</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -544,7 +618,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                       <div className="w-[150px] text-center">{user.dataCad}</div>
                       <div className="w-[150px] text-center">{user.ultimoAcc}</div>
                       <div className="w-[60px] flex justify-center">
-                        <button 
+                        <button
                           onClick={() => handleOpenEditUser(user)}
                           className="flex size-7 items-center justify-center rounded-lg bg-[#D7D7D740] text-[#606060] hover:bg-[#F84910] hover:text-white transition-fluid cursor-pointer hover-scale"
                           title="Editar Usuário"
@@ -561,7 +635,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                     {filteredUsers.length} registros encontrados.
                   </div>
                   <div className="flex items-center gap-2 rounded-lg bg-white">
-                    <button 
+                    <button
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
                       className={`flex size-6 items-center justify-center rounded cursor-pointer transition-fluid ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 hover:scale-110'}`}
@@ -570,8 +644,8 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                     </button>
                     <div className="flex items-center gap-1">
                       {[...Array(totalPages)].map((_, i) => (
-                        <button 
-                          key={i} 
+                        <button
+                          key={i}
                           onClick={() => setCurrentPage(i + 1)}
                           className={`flex size-6 items-center justify-center rounded text-[10px] font-bold transition-fluid cursor-pointer ${currentPage === i + 1 ? 'bg-[#F84910] text-white shadow-sm scale-110' : 'text-[#606060] hover:bg-gray-100'}`}
                         >
@@ -579,7 +653,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                         </button>
                       ))}
                     </div>
-                    <button 
+                    <button
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
                       className={`flex size-6 items-center justify-center rounded cursor-pointer transition-fluid ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 hover:scale-110'}`}
@@ -591,70 +665,76 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               </div>
             </div>
           ) : activeMenu === 'Produtos' ? (
-            <Produtos 
-              produtosList={produtosList} 
-              setProdutosList={setProdutosList} 
+            <Produtos
+              produtosList={produtosList}
+              setProdutosList={setProdutosList}
               insumosList={insumosList}
               fornecedoresList={fornecedoresList}
               entradasList={entradasList}
               setEntradasList={setEntradasList}
               saidasList={saidasList}
               setSaidasList={setSaidasList}
-              isAddModalOpen={isAddingProduto} 
-              setIsAddModalOpen={setIsAddingProduto} 
+              isAddModalOpen={isAddingProduto}
+              setIsAddModalOpen={setIsAddingProduto}
               searchQuery={searchQuery}
               dashboardFilter={dashboardFilter}
               clearFilter={() => setDashboardFilter(null)}
             />
           ) : activeMenu === 'Entradas' ? (
-            <Entradas 
-              entradasList={entradasList} 
-              setEntradasList={setEntradasList} 
+            <Entradas
+              entradasList={entradasList}
+              setEntradasList={setEntradasList}
               produtosList={produtosList}
               setProdutosList={setProdutosList}
               insumosList={insumosList}
               setInsumosList={setInsumosList}
               fornecedoresList={fornecedoresList}
-              isAddModalOpen={isAddingEntrada} 
-              setIsAddModalOpen={setIsAddingEntrada} 
-              searchQuery={searchQuery} 
+              isAddModalOpen={isAddingEntrada}
+              setIsAddModalOpen={setIsAddingEntrada}
+              searchQuery={searchQuery}
             />
           ) : activeMenu === 'Matérias-primas' ? (
-            <MateriasPrimas 
-              insumosList={insumosList} 
-              setInsumosList={setInsumosList} 
+            <MateriasPrimas
+              insumosList={insumosList}
+              setInsumosList={setInsumosList}
               fornecedoresList={fornecedoresList}
               entradasList={entradasList}
               setEntradasList={setEntradasList}
               saidaInsumosList={saidaInsumosList}
               setSaidaInsumosList={setSaidaInsumosList}
-              isAddModalOpen={isAddingMateriaPrima} 
-              setIsAddModalOpen={setIsAddingMateriaPrima} 
+              produtosList={produtosList}
+              setProdutosList={setProdutosList}
+              isAddModalOpen={isAddingMateriaPrima}
+              setIsAddModalOpen={setIsAddingMateriaPrima}
               searchQuery={searchQuery}
               dashboardFilter={dashboardFilter}
               clearFilter={() => setDashboardFilter(null)}
             />
           ) : activeMenu === 'Fornecedores' ? (
-            <Fornecedores 
-              isAddModalOpen={isAddingFornecedor} 
-              setIsAddModalOpen={setIsAddingFornecedor} 
-              searchQuery={searchQuery} 
+            <Fornecedores
+              isAddModalOpen={isAddingFornecedor}
+              setIsAddModalOpen={setIsAddingFornecedor}
+              searchQuery={searchQuery}
               fornecedoresList={fornecedoresList}
               setFornecedoresList={setFornecedoresList}
+              insumosList={insumosList}
+              setInsumosList={setInsumosList}
+              produtosList={produtosList}
+              setProdutosList={setProdutosList}
             />
           ) : activeMenu === 'Saídas' ? (
-            <Saidas 
-              saidasList={saidasList} 
-              setSaidasList={setSaidasList} 
+            <Saidas
+              saidasList={saidasList}
+              setSaidasList={setSaidasList}
               saidaInsumosList={saidaInsumosList}
               setSaidaInsumosList={setSaidaInsumosList}
-              produtosList={produtosList} 
+              produtosList={produtosList}
               setProdutosList={setProdutosList}
               insumosList={insumosList}
               setInsumosList={setInsumosList}
-              isAddModalOpen={isAddingSaida} 
-              setIsAddModalOpen={setIsAddingSaida} 
-              searchQuery={searchQuery} 
+              isAddModalOpen={isAddingSaida}
+              setIsAddModalOpen={setIsAddingSaida}
+              searchQuery={searchQuery}
             />
           ) : (
             <div className="flex w-full flex-col items-center justify-center py-20 text-[#606060] bg-white border border-[#F0F0F3] rounded-lg">
@@ -678,14 +758,14 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               </p>
             </div>
             <div className="flex w-full gap-3 mt-2">
-              <button 
-                onClick={() => { setShowDeleteConfirm(false); setEditingUser(null); }} 
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setEditingUser(null); }}
                 className="flex-1 h-11 rounded-lg bg-gray-100 font-plus-jakarta text-sm font-bold text-[#606060] hover:bg-gray-200 transition-fluid cursor-pointer"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleConfirmDelete} 
+              <button
+                onClick={handleConfirmDelete}
                 className="flex-1 h-11 rounded-lg bg-[#BA0000] font-plus-jakarta text-sm font-bold text-white hover:bg-red-700 transition-fluid shadow-md hover-scale cursor-pointer"
               >
                 Sim, Excluir

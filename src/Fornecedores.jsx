@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Fornecedores({ isAddModalOpen, setIsAddModalOpen, searchQuery, fornecedoresList, setFornecedoresList }) {
+export default function Fornecedores({ 
+  isAddModalOpen, 
+  setIsAddModalOpen, 
+  searchQuery, 
+  fornecedoresList, 
+  setFornecedoresList,
+  insumosList = [],
+  setInsumosList,
+  produtosList = [],
+  setProdutosList
+}) {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,9 +81,38 @@ export default function Fornecedores({ isAddModalOpen, setIsAddModalOpen, search
 
   const confirmDeleteFornecedor = () => {
     if (!fornToDelete) return;
+
+    // 1. Identificar insumos vinculados a este fornecedor
+    const insumosToRemove = insumosList.filter(i => 
+      (i.fornecedor || '').toLowerCase().trim() === (fornToDelete.fantasia || '').toLowerCase().trim()
+    );
+    const insumoIdsToRemove = insumosToRemove.map(i => i.id);
+
+    // 2. Remover do estado global de insumos
+    if (setInsumosList) {
+      setInsumosList(prev => prev.filter(i => 
+        (i.fornecedor || '').toLowerCase().trim() !== (fornToDelete.fantasia || '').toLowerCase().trim()
+      ));
+    }
+
+    // 3. Remover desses insumos das receitas de produtos
+    if (setProdutosList && insumoIdsToRemove.length > 0) {
+      setProdutosList(prev => prev.map(p => ({
+        ...p,
+        insumos: (p.insumos || []).filter(pi => !insumoIdsToRemove.includes(pi.id))
+      })));
+    }
+
+    // 4. Remover o fornecedor
     setFornecedoresList(fornecedoresList.filter(f => f.id !== fornToDelete.id));
-    setNotification({ title: 'Excluído!', message: 'O fornecedor foi removido com sucesso.', type: 'info' });
-    setTimeout(() => setNotification(null), 3000);
+    
+    setNotification({ 
+      title: 'Excluído!', 
+      message: `O fornecedor e ${insumosToRemove.length} insumo(s) associado(s) foram removidos.`, 
+      type: 'info' 
+    });
+
+    setTimeout(() => setNotification(null), 3500);
     setShowDeleteModal(false);
     setFornToDelete(null);
     setEditingItem(null);

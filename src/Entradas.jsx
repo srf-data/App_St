@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { entrySchema, formatZodError } from './utils/validators';
 
 export default function Entradas({ entradasList, setEntradasList, produtosList, setProdutosList, insumosList, setInsumosList, fornecedoresList, isAddModalOpen, setIsAddModalOpen, searchQuery }) {
   const [activeTab, setActiveTab] = useState('produtos'); // Para o Modal
@@ -9,6 +10,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const [deleteAction, setDeleteAction] = useState(null);
   const [insumoToRemoveId, setInsumoToRemoveId] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   const ITEMS_PER_PAGE = 20;
 
   // Form states for Insumos
@@ -75,7 +77,25 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const paginatedEntradas = filteredEntradas.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSaveEntradaProduto = () => {
-    if (!entradaProdutoId || !entradaProdutoQtde) return;
+    const dataToValidate = {
+      qtde: entradaProdutoQtde,
+      desconto: entradaProdutoDesconto || 0,
+    };
+
+    const result = entrySchema.safeParse(dataToValidate);
+
+    if (!result.success || !entradaProdutoId) {
+      const errors = formatZodError(result.error);
+      setFormErrors(errors);
+      setNotification({ 
+        title: 'Erro de Validação', 
+        message: !entradaProdutoId ? 'Selecione um produto.' : 'Verifique os dados informados.', 
+        type: 'error' 
+      });
+      return;
+    }
+
+    setFormErrors({});
     
     try {
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -167,7 +187,18 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   };
 
   const handleAddInsumo = () => {
-    if (curInsumoNome.trim() === '' || curInsumoQtde.trim() === '' || curInsumoValor.trim() === '') return;
+    const dataToValidate = {
+      qtde: curInsumoQtde,
+      valor: curInsumoValor.replace(',', '.'),
+    };
+
+    const result = entrySchema.safeParse(dataToValidate);
+
+    if (!result.success || curInsumoNome.trim() === '') {
+      const errors = formatZodError(result.error);
+      setFormErrors(errors);
+      return;
+    }
     
     // Check if the exact same insumo already exists with 'atualizar'
     const hasAtualizar = insumosAdicionados.some(i => i.nome.toLowerCase() === curInsumoNome.toLowerCase() && i.acaoPreco === 'atualizar');
@@ -184,7 +215,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
     setInsumosAdicionados([...insumosAdicionados, novoInsumo]);
     
-    // Reset fields
+    setFormErrors({});
     setCurInsumoNome('');
     setCurInsumoQtde('');
     setCurInsumoValor('');
@@ -213,8 +244,12 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
   const handleSaveProduto = () => {
     // Basic validation
-    if (!nomeProduto || nomeProduto.trim() === '' || insumosAdicionados.length === 0) return;
+    if (!nomeProduto || nomeProduto.trim() === '' || insumosAdicionados.length === 0) {
+      setNotification({ title: 'Atenção', message: 'Selecione o fornecedor e adicione ao menos um insumo.', type: 'warning' });
+      return;
+    }
 
+    setFormErrors({});
     try {
       const dataHoje = new Date().toLocaleDateString('pt-BR');
       const descontoGlobal = parseFloat(entradaInsumoDesconto) || 0;
@@ -338,6 +373,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
   const handleOpenEdit = (entrada) => {
     setEditingEntrada(entrada);
+    setFormErrors({});
     setActiveTab(activeMainTab); // Lock the modal to current list context
     if (activeMainTab === 'produtos') {
       const prod = produtosList.find(p => p.nome === entrada.razao);
@@ -494,10 +530,22 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
             onMouseDown={(e) => e.stopPropagation()}
           >
             {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
+              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${
+                notification.type === 'success' ? 'border-green-100 bg-green-50' : 
+                notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' : 
+                notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 
+                'border-red-100 bg-red-50'
+              }`}>
+                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${
+                  notification.type === 'success' ? 'bg-green-500' : 
+                  notification.type === 'warning' ? 'bg-yellow-500' : 
+                  notification.type === 'info' ? 'bg-blue-500' : 
+                  'bg-red-500'
+                }`}>
                    {notification.type === 'success' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                   ) : notification.type === 'warning' ? (
+                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
                    ) : notification.type === 'info' ? (
                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                    ) : (
@@ -505,8 +553,18 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                    )}
                 </div>
                 <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
+                  <h4 className={`font-plus-jakarta text-sm font-bold ${
+                    notification.type === 'success' ? 'text-green-800' : 
+                    notification.type === 'warning' ? 'text-yellow-800' : 
+                    notification.type === 'info' ? 'text-blue-800' : 
+                    'text-red-800'
+                  }`}>{notification.title}</h4>
+                  <p className={`font-inter text-xs leading-relaxed ${
+                    notification.type === 'success' ? 'text-green-600' : 
+                    notification.type === 'warning' ? 'text-yellow-600' : 
+                    notification.type === 'info' ? 'text-blue-600' : 
+                    'text-red-600'
+                  }`}>{notification.message}</p>
                 </div>
                 <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
               </div>
@@ -567,8 +625,9 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                       type="number" 
                       value={entradaProdutoQtde} 
                       onChange={e => setEntradaProdutoQtde(e.target.value)} 
-                      className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-center font-inter text-sm outline-none focus:border-[#F84910]" 
+                      className={`h-11 w-full rounded-lg border ${formErrors.qtde ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 text-center font-inter text-sm outline-none focus:border-[#F84910]`} 
                     />
+                    {formErrors.qtde && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.qtde}</p>}
                   </div>
                   <div className="w-[120px] flex flex-col gap-1.5">
                     <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Desconto (R$)</label>
@@ -578,8 +637,9 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                       value={entradaProdutoDesconto} 
                       onChange={e => setEntradaProdutoDesconto(e.target.value)} 
                       placeholder="0,00"
-                      className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-center font-inter text-sm outline-none focus:border-[#F84910]" 
+                      className={`h-11 w-full rounded-lg border ${formErrors.desconto ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 text-center font-inter text-sm outline-none focus:border-[#F84910]`} 
                     />
+                    {formErrors.desconto && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.desconto}</p>}
                   </div>
                 </div>
                 
@@ -642,15 +702,16 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
               </div>
               <div className="flex w-[180px] flex-col gap-1.5">
                 <label className="font-inter text-xs font-medium text-[#606060] px-1">Desc. Fornecedor (R$)</label>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  value={entradaInsumoDesconto} 
-                  onChange={e => setEntradaInsumoDesconto(e.target.value)} 
-                  placeholder="0,00"
-                  className="h-10 w-full rounded-lg border border-[#F0F0F3] bg-[rgba(215,215,215,0.15)] px-4 font-inter text-sm text-[#0D0D0D] outline-none transition-fluid focus:bg-white focus:shadow-sm"
-                />
-              </div>
+                   <input 
+                    type="number" 
+                    step="0.01"
+                    value={entradaInsumoDesconto} 
+                    onChange={e => setEntradaInsumoDesconto(e.target.value)} 
+                    placeholder="0,00"
+                    className={`h-10 w-full rounded-lg border ${formErrors.desconto ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[rgba(215,215,215,0.15)] px-4 font-inter text-sm text-[#0D0D0D] outline-none transition-fluid focus:bg-white focus:shadow-sm`}
+                  />
+                  {formErrors.desconto && <p className="text-[10px] text-red-500 mt-1">{formErrors.desconto}</p>}
+                </div>
             </div>
 
             {/* Inner Table "Receita" */}
@@ -749,7 +810,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                       placeholder="Ex: 2"
                       value={curInsumoQtde}
                       onChange={e => setCurInsumoQtde(e.target.value)}
-                      className="h-8 w-full rounded border border-[#e0e0e0] bg-white px-2 text-center font-inter text-xs outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                      className={`h-8 w-full rounded border ${formErrors.qtde ? 'border-red-500' : 'border-[#e0e0e0]'} bg-white px-2 text-center font-inter text-xs outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                     />
                   </div>
 
@@ -760,7 +821,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                       placeholder="Ex: 5,00"
                       value={curInsumoValor}
                       onChange={e => setCurInsumoValor(e.target.value)}
-                      className="h-8 w-full rounded border border-[#e0e0e0] bg-white px-2 text-center font-inter text-xs outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                      className={`h-8 w-full rounded border ${formErrors.valor ? 'border-red-500' : 'border-[#e0e0e0]'} bg-white px-2 text-center font-inter text-xs outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                     />
                   </div>
 
