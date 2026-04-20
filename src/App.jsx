@@ -22,7 +22,6 @@ const initialFakeUsers = [
 
 function App() {
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
@@ -32,7 +31,15 @@ function App() {
   
   const [loginPhase, setLoginPhase] = useState('login')
   const [fakeUsersList, setFakeUsersList] = useState(initialFakeUsers)
-  const [currentUser, setCurrentUser] = useState(null)
+  
+  // Initialize state from localStorage if available
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('solart_isLoggedIn') === 'true';
+  })
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('solart_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  })
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   
@@ -44,6 +51,17 @@ function App() {
     if (savedEmail) setUsername(savedEmail);
   }, []);
 
+  // Persist session to localStorage
+  useEffect(() => {
+    localStorage.setItem('solart_isLoggedIn', isLoggedIn);
+    if (currentUser) {
+      localStorage.setItem('solart_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('solart_currentUser');
+      localStorage.removeItem('solart_isLoggedIn');
+    }
+  }, [isLoggedIn, currentUser]);
+
   const isFormValid = username.trim().length > 0 && (loginPhase === 'login' ? password.length > 0 : true);
 
   async function handleLogin(event) {
@@ -51,6 +69,7 @@ function App() {
     setNotification(null)
     setIsProcessing(true)
 
+    console.log('Tentando login para:', username);
     try {
       if (loginPhase === 'reset_password') {
         if (newPassword !== confirmPassword) {
@@ -121,7 +140,7 @@ function App() {
         setOtpSent(true);
         setNotification({ 
           title: 'Código Enviado!', 
-          message: `Enviamos um código para seu e-mail. ${data.previewUrl ? `[DEBUG] Link do e-mail: ${data.previewUrl}` : ''}` 
+          message: 'Enviamos um código para seu e-mail. Verifique sua caixa de entrada e spam.' 
         });
       } else {
         setNotification({ title: 'Erro', message: data.message });
@@ -139,7 +158,8 @@ function App() {
         onLogout={() => {
           setIsLoggedIn(false);
           setCurrentUser(null);
-          // keep email in field for convenience
+          localStorage.removeItem('solart_isLoggedIn');
+          localStorage.removeItem('solart_currentUser');
         }} 
         currentUser={currentUser}
         fakeUsersList={fakeUsersList}
@@ -281,7 +301,7 @@ function App() {
 
                 <button
                   type="submit"
-                  disabled={!isFormValid}
+                  disabled={!isFormValid || isProcessing}
                   className={`h-13 w-full max-w-[380px] rounded-full font-plus-jakarta text-base font-semibold transition-all duration-300 ${isFormValid ? 'bg-gradient-to-r from-[#F84910] via-[#FF6838] to-[#F84910] text-white animate-bg-gradient shadow-[0_0_15px_rgba(248,73,16,0.3)]' : 'bg-[rgba(139,139,139,0.2)] text-[#8b8b8b] cursor-not-allowed'}`}
                 >
                   Entrar

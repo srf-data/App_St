@@ -44,12 +44,6 @@ const forgotPasswordTemplate = (otp) => {
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
                         <tr>
                             <td align="center">
-                                ${logoBase64 ? `<img src="${logoBase64}" alt="St. Solart" style="height: 46px; width: auto; display: block;">` : ''}
-                            </td>
-                        </tr>
-                        <tr><td style="height: 4px; font-size: 4px; line-height: 4px;">&nbsp;</td></tr>
-                        <tr>
-                            <td align="center">
                                 <span style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; font-size: 24px; font-weight: 800; color: #021D48; letter-spacing: -1.2px; display: block; line-height: 1;">st.solart</span>
                             </td>
                         </tr>

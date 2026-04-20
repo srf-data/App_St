@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -15,6 +16,12 @@ const DB_PATH = path.join(__dirname, 'db.json');
 app.use(cors());
 app.use(express.json());
 
+// Log middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // Helper to read DB
 const readDB = () => {
     const data = fs.readFileSync(DB_PATH, 'utf8');
@@ -24,6 +31,25 @@ const readDB = () => {
 // Helper to write DB
 const writeDB = (data) => {
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+};
+
+// Helper to read logo and convert to base64
+const getLogoBase64 = () => {
+    try {
+        // Use PNG for better email compatibility (Gmail doesn't support SVG base64)
+        const logoPath = path.join(__dirname, '..', 'src', 'assets', 'brand-logo-new.png');
+        if (!fs.existsSync(logoPath)) {
+             // fallback to SVG if PNG not found (though PNG is preferred)
+             const svgPath = path.join(__dirname, '..', 'src', 'assets', 'brand-logo-new.svg');
+             const svgData = fs.readFileSync(svgPath);
+             return `data:image/svg+xml;base64,${svgData.toString('base64')}`;
+        }
+        const logoData = fs.readFileSync(logoPath);
+        return `data:image/png;base64,${logoData.toString('base64')}`;
+    } catch (e) {
+        console.error('Erro ao carregar logo:', e.message);
+        return null;
+    }
 };
 
 // In-memory OTP storage (for production use a DB or Redis)
@@ -69,37 +95,36 @@ app.post('/api/forgot-password', async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(email, { otp, expires: Date.now() + 15 * 60 * 1000 });
 
-    // Setup Ethereal (Test Service)
+    // Setup Real Gmail SMTP
     try {
-        let testAccount = await nodemailer.createTestAccount();
         let transporter = nodemailer.createTransport({
-            host: "smtp.ethereal.email",
-            port: 587,
-            secure: false, 
+            host: process.env.SMTP_HOST || "smtp.gmail.com",
+            port: process.env.SMTP_PORT || 465,
+            secure: true, 
             auth: {
-                user: testAccount.user,
-                pass: testAccount.pass,
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
             },
         });
 
-        const html = forgotPasswordTemplate(otp);
+        const logoBase64 = getLogoBase64();
+        const html = forgotPasswordTemplate(otp, logoBase64);
 
-        let info = await transporter.sendMail({
-            from: '"St. Solart" <noreply@studiosolart.com>',
+        await transporter.sendMail({
+            from: '"Studio Solart" <' + process.env.SMTP_USER + '>',
             to: email,
             subject: "Recuperação de Senha - Código de Validação",
             html: html,
         });
 
-        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+        console.log(`[${new Date().toLocaleTimeString()}] E-mail enviado para: ${email}`);
         
         res.json({ 
-            message: 'Código enviado!', 
-            previewUrl: nodemailer.getTestMessageUrl(info) // Send preview URL for visual testing
+            message: 'Código enviado com sucesso para sua caixa de entrada!' 
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ title: 'Erro de E-mail', message: 'Não foi possível enviar o e-mail de recuperação.' });
+        console.error('Erro ao enviar e-mail:', error);
+        res.status(500).json({ title: 'Erro de E-mail', message: 'Não foi possível enviar o e-mail. Verifique se as credenciais no .env estão corretas.' });
     }
 });
 
