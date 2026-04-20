@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import Users from './Users'
 
+// Helper to validate email format
+const isValidEmail = (email) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+};
+
 import bgImageLogin from './assets/login-bg.png'
 import iconeBadge from './assets/badge.svg'
 import iconeBox from './assets/icone-estoque.png'
@@ -70,6 +76,12 @@ function App() {
     setIsProcessing(true)
 
     console.log('Tentando login para:', username);
+    
+    if (!isValidEmail(username)) {
+      setNotification({ title: 'E-mail Inválido', message: 'Por favor, insira um e-mail válido (exemplo@dominio.com).', type: 'error' });
+      setIsProcessing(false);
+      return;
+    }
     try {
       if (loginPhase === 'reset_password') {
         if (newPassword !== confirmPassword) {
@@ -125,8 +137,12 @@ function App() {
 
   async function handleSendOTP() {
     if (!username) {
-       setNotification({ title: 'Atenção', message: 'Por favor, digite seu e-mail/usuário primeiro.' });
+       setNotification({ title: 'Atenção', message: 'Por favor, digite seu e-mail primeiro.' });
        return;
+    }
+    if (!isValidEmail(username)) {
+      setNotification({ title: 'E-mail Inválido', message: 'Por favor, insira um e-mail válido.', type: 'error' });
+      return;
     }
     setIsProcessing(true);
     try {
