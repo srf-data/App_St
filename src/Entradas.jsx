@@ -458,20 +458,20 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                   className="flex h-[44px] w-full items-center justify-between rounded-lg bg-white px-2 hover:bg-slate-50 transition-fluid border-b border-[#F0F0F3] last:border-0 hover:shadow-sm anim-slide-up"
                   style={{ animationDelay: `${idx * 0.05}s` }}
                 >
-                  <div className="w-[80px] text-center font-inter text-xs font-medium text-[#0D0D0D]">{entrada.id}</div>
+                  <div className="w-[80px] text-center font-inter text-xs font-medium text-[#0D0D0D]">{entrada.id || '-'}</div>
                   <div className="flex-1 w-[auto] max-w-none text-left px-4">
-                    <p className="font-inter text-xs font-semibold text-[#0D0D0D] truncate uppercase">{entrada.razao}</p>
+                    <p className="font-inter text-xs font-semibold text-[#0D0D0D] truncate uppercase">{entrada.razao || '-'}</p>
                     {entrada.fornecedor && entrada.fornecedor !== entrada.razao && (
                       <p className="font-inter text-[10px] text-[#A0A0A0] truncate uppercase pt-0.5">{entrada.fornecedor}</p>
                     )}
                   </div>
-                  <div className="w-[70px] text-center font-inter text-xs font-bold text-[#0D0D0D]">{entrada.qtde || 1}</div>
-                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">R$ {entrada.valor}</div>
-                  <div className="w-[60px] text-center font-inter text-xs font-medium text-[#BA0000]">-{entrada.desconto}</div>
-                  <div className="w-[110px] text-center font-inter text-xs font-bold text-[#F84910]">R$ {entrada.total}</div>
-                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.emissao}</div>
-                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.entrada}</div>
-                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.cadastro}</div>
+                  <div className="w-[70px] text-center font-inter text-xs font-bold text-[#0D0D0D]">{entrada.qtde || '-'}</div>
+                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">R$ {entrada.valor || '0,00'}</div>
+                  <div className="w-[60px] text-center font-inter text-xs font-medium text-[#BA0000]">-{entrada.desconto || '0,00'}</div>
+                  <div className="w-[110px] text-center font-inter text-xs font-bold text-[#F84910]">R$ {entrada.total || '0,00'}</div>
+                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.emissao || '-'}</div>
+                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.entrada || '-'}</div>
+                  <div className="w-[110px] text-center font-inter text-xs font-medium text-[#606060]">{entrada.cadastro || '-'}</div>
                   <div className="w-[80px] flex justify-center">
                      <button 
                        onClick={() => handleOpenEdit(entrada)}

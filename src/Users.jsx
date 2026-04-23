@@ -608,15 +608,15 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                 ) : (
                   paginatedUsers.map((user) => (
                     <div key={user.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-colors hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0">
-                      <div className="w-[80px] text-center text-[#0D0D0D]">{user.id}</div>
+                      <div className="w-[80px] text-center text-[#0D0D0D]">{user.id || '-'}</div>
                       <div className="w-[75px] flex justify-center">
                         <img src={user.foto || avatarDefault} alt="Avatar" className="h-[34px] w-[34px] object-cover rounded-full border border-[#F0F0F3]" />
                       </div>
-                      <div className="flex-1 w-[auto] max-w-none text-left px-4 text-[#0D0D0D] truncate">{user.nome}</div>
-                      <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{user.email}</div>
-                      <div className="w-[140px] text-center">{user.senha}</div>
-                      <div className="w-[150px] text-center">{user.dataCad}</div>
-                      <div className="w-[150px] text-center">{user.ultimoAcc}</div>
+                      <div className="flex-1 w-[auto] max-w-none text-left px-4 text-[#0D0D0D] truncate">{user.name || user.nome || '-'}</div>
+                      <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{user.email || '-'}</div>
+                      <div className="w-[140px] text-center">{user.senha || '-'}</div>
+                      <div className="w-[150px] text-center">{user.dataCad || '-'}</div>
+                      <div className="w-[150px] text-center">{user.ultimoAcc || '-'}</div>
                       <div className="w-[60px] flex justify-center">
                         <button
                           onClick={() => handleOpenEditUser(user)}

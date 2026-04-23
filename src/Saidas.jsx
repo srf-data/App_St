@@ -209,12 +209,12 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
               ) : (
                paginatedSaidas.map((saida, idx) => (
                  <div key={saida.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-fluid hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0 anim-slide-up">
-                   <div className="w-[80px] text-center text-[#0D0D0D]">{saida.id}</div>
-                   <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{saida.cliente}</div>
-                   <div className="flex-1 text-left px-4 truncate">{saida.produto}</div>
-                   <div className="w-[80px] text-center">{saida.qtde}</div>
-                   <div className="w-[110px] text-center font-bold text-[#F84910]">R$ {saida.total}</div>
-                   <div className="w-[110px] text-center">{saida.data}</div>
+                   <div className="w-[80px] text-center text-[#0D0D0D]">{saida.id || '-'}</div>
+                   <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{saida.cliente || '-'}</div>
+                   <div className="flex-1 text-left px-4 truncate">{saida.produto || '-'}</div>
+                   <div className="w-[80px] text-center">{saida.qtde || '-'}</div>
+                   <div className="w-[110px] text-center font-bold text-[#F84910]">R$ {saida.total || '0,00'}</div>
+                   <div className="w-[110px] text-center">{saida.data || '-'}</div>
                    <div className="w-[100px] flex justify-center">
                       <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${saida.status === 'entregue' ? 'bg-green-50 text-[#36BA6F]' : 'bg-orange-50 text-[#F84910]'}`}>{saida.status}</div>
                    </div>
@@ -244,18 +244,18 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
             {paginatedSaidaInsumos.map((entry, idx) => (
               <div key={entry.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-fluid hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0 anim-slide-up">
                 <div className="w-[80px] text-center text-[#0D0D0D]">{idx + 1}</div>
-                <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{entry.nome}</div>
-                <div className="w-[100px] text-center font-bold text-red-500">-{entry.qtde}</div>
+                <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{entry.nome || '-'}</div>
+                <div className="w-[100px] text-center font-bold text-red-500">-{entry.qtde || '-'}</div>
                 <div className="w-[120px] flex justify-center">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                     entry.status === 'entregue' ? 'bg-green-100 text-green-600' :
                     entry.status === 'enviado' ? 'bg-blue-100 text-blue-600' :
                     'bg-amber-100 text-amber-600'
                   }`}>
-                    {entry.status || 'pendente'}
+                    {entry.status || '-'}
                   </span>
                 </div>
-                <div className="w-[110px] text-center">{entry.data}</div>
+                <div className="w-[110px] text-center">{entry.data || '-'}</div>
                 <div className="w-[80px] flex justify-center">
                   <button 
                     onClick={() => handleOpenEdit(entry, 'insumos')}

@@ -37,6 +37,16 @@ export default function Fornecedores({
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [contato, setContato] = useState('');
+  
+  const maskCnpj = (value) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .slice(0, 18);
+  };
 
   const ITEMS_PER_PAGE = 20;
 
@@ -51,15 +61,31 @@ export default function Fornecedores({
   const paginatedFornecedores = filteredFornecedores.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSaveFornecedor = () => {
-    if (!razaoSocial || !cnpj) return;
+    if (!razaoSocial.trim()) return;
+
+    let finalCnpj = cnpj.trim();
+    if (!finalCnpj) {
+      finalCnpj = '00.000.000/0000-00';
+    } else {
+      const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
+      if (!cnpjRegex.test(finalCnpj)) {
+        setNotification({ 
+          title: 'CNPJ Inválido', 
+          message: 'O CNPJ deve estar no formato 00.000.000/0000-00 ou ser deixado em branco.', 
+          type: 'error' 
+        });
+        return;
+      }
+    }
+
     if (editingItem) {
-      setFornecedoresList(fornecedoresList.map(f => f.id === editingItem.id ? { ...f, razaoSocial, fantasia, cnpj, cidade, estado, contato } : f));
+      setFornecedoresList(fornecedoresList.map(f => f.id === editingItem.id ? { ...f, razaoSocial, fantasia, cnpj: finalCnpj, cidade, estado, contato } : f));
       setNotification({ title: 'Sucesso!', message: 'Fornecedor atualizado com sucesso!', type: 'success' });
       setTimeout(() => setNotification(null), 3000);
       setEditingItem(null);
     } else {
       const newId = Math.max(0, ...fornecedoresList.map(f => f.id)) + 1;
-      const newItem = { id: newId, razaoSocial, fantasia, cnpj, cidade, estado, contato };
+      const newItem = { id: newId, razaoSocial, fantasia, cnpj: finalCnpj, cidade, estado, contato };
       setFornecedoresList([newItem, ...fornecedoresList]);
       setNotification({ title: 'Sucesso!', message: 'Fornecedor cadastrado com sucesso!', type: 'success' });
       setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
@@ -129,7 +155,7 @@ export default function Fornecedores({
     setContato(item.contato);
   };
 
-  const isFormValid = razaoSocial.trim() && cnpj.trim();
+  const isFormValid = razaoSocial.trim();
 
   return (
     <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
@@ -172,11 +198,11 @@ export default function Fornecedores({
             >
               <div className="w-[80px] text-center text-[#0D0D0D]">{forn.id}</div>
               <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold uppercase">{forn.razaoSocial}</div>
-              <div className="w-[140px] text-center truncate italic">{forn.fantasia}</div>
-              <div className="w-[140px] text-center">{forn.cnpj}</div>
-              <div className="w-[120px] text-center">{forn.cidade}</div>
-              <div className="w-[60px] text-center font-bold text-[#F84910]">{forn.estado}</div>
-              <div className="w-[140px] text-center">{forn.contato}</div>
+              <div className="w-[140px] text-center truncate italic">{forn.fantasia || '-'}</div>
+              <div className="w-[140px] text-center">{forn.cnpj || '-'}</div>
+              <div className="w-[120px] text-center">{forn.cidade || '-'}</div>
+              <div className="w-[60px] text-center font-bold text-[#F84910]">{forn.estado || '-'}</div>
+              <div className="w-[140px] text-center">{forn.contato || '-'}</div>
                <div className="w-[80px] flex justify-center">
                   <button 
                     onClick={() => handleOpenEdit(forn)}
@@ -298,8 +324,14 @@ export default function Fornecedores({
                 <input type="text" value={fantasia} onChange={e => setFantasia(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">CNPJ</label>
-                <input type="text" value={cnpj} onChange={e => setCnpj(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm" />
+                <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">CNPJ (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={cnpj} 
+                  placeholder="00.000.000/0000-00"
+                  onChange={e => setCnpj(maskCnpj(e.target.value))} 
+                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm" 
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Cidade</label>
@@ -332,7 +364,7 @@ export default function Fornecedores({
                 className={`flex h-11 items-center justify-center gap-3 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid hover-scale shadow-md ${isFormValid ? 'bg-[#36BA6F] text-[#BDFFDA] cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
                 onMouseDown={() => {
                   if (!isFormValid) {
-                    setNotification({ title: 'Campos Obrigatórios', message: 'Por favor, preencha a Razão Social e o CNPJ do fornecedor.', type: 'error' });
+                    setNotification({ title: 'Campos Obrigatórios', message: 'Por favor, preencha a Razão Social do fornecedor.', type: 'error' });
                   }
                 }}
               >

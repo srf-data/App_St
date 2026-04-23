@@ -330,7 +330,7 @@ export default function Produtos({
                   {produto.id}
                 </div>
                 
-                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{produto.nome}</div>
+                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{produto.nome || '-'}</div>
                 
                 <div className="w-[120px] flex justify-center">
                   <button 
@@ -342,7 +342,7 @@ export default function Produtos({
                   </button>
                 </div>
                 
-                <div className="w-[130px] text-center">{produto.qtd}</div>
+                <div className="w-[130px] text-center">{produto.qtd || '-'}</div>
                 <div className="w-[110px] text-center font-medium">
                   {(() => {
                     const dynamicCost = getDynamicCostNum(produto);
@@ -356,7 +356,7 @@ export default function Produtos({
                     );
                   })()}
                 </div>
-                <div className="w-[100px] text-center text-[#36BA6F] font-semibold">{produto.venda}</div>
+                <div className="w-[100px] text-center text-[#36BA6F] font-semibold">{produto.venda || '-'}</div>
                 <div className="w-[100px] text-center">
                   {(() => {
                     const c = getDynamicCostNum(produto);

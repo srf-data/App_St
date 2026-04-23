@@ -298,9 +298,9 @@ export default function MateriasPrimas({
                   {(isMin || isZer) && <div className="size-2 rounded-full animate-pulse" style={{ backgroundColor: isMin ? '#F84910' : '#BA0000' }} />}
                   {insumo.id}
                 </div>
-                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{insumo.nome}</div>
-                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{insumo.fornecedor}</div>
-                <div className="w-[90px] text-center">{insumo.unidade}</div>
+                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{insumo.nome || '-'}</div>
+                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{insumo.fornecedor || '-'}</div>
+                <div className="w-[90px] text-center">{insumo.unidade || '-'}</div>
                 <div className="w-[120px] text-center font-bold text-[#606060] flex flex-col items-center justify-center leading-tight group relative">
                   <span className="cursor-pointer hover:text-[#F84910] transition-fluid" onClick={() => setHistoryItem(insumo)}>
                     R$ {insumo.custoUnitario.toFixed(2).replace('.', ',')}
@@ -315,7 +315,7 @@ export default function MateriasPrimas({
                   )}
                 </div>
                 <div className={`w-[110px] text-center font-bold py-1 rounded-md ${insumo.estoqueAtual <= 0 ? 'text-[#BA0000] bg-red-50' : insumo.estoqueAtual <= 5 ? 'text-[#F84910] bg-orange-50' : 'text-[#36BA6F] bg-[rgba(54,186,111,0.05)]'}`}>
-                  {Number(insumo.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {insumo.unidade}
+                  {insumo.estoqueAtual !== undefined && insumo.estoqueAtual !== null ? `${Number(insumo.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${insumo.unidade || ''}` : '-'}
                 </div>
                 <div className="w-[40px] flex justify-center">
                    {insumo.foto ? (
