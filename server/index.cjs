@@ -1452,7 +1452,7 @@ app.use(express.static(path.join(__dirname, '../dist')));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
-app.get('/*', (req, res) => {
+app.use((req, res) => {
     // Se for uma rota de API que não foi encontrada, retorna 404 normal
     if (req.url.startsWith('/api/')) {
         return res.status(404).json({ error: `Route ${req.url} not found` });
