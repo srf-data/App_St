@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 import { materialSchema, formatZodError } from './utils/validators';
 
 export default function MateriasPrimas({ 
+  fetchInsumos,
+  fetchEntradas,
+  fetchProdutos,
   insumosList, 
   setInsumosList, 
   fornecedoresList, 
@@ -13,18 +17,31 @@ export default function MateriasPrimas({
   setProdutosList,
   isAddModalOpen, 
   setIsAddModalOpen, 
-  searchQuery, 
+  searchQuery,
   dashboardFilter, 
-  clearFilter 
+  clearFilter,
+  setNotification
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [notification, setNotification] = useState(null);
+
   const [formErrors, setFormErrors] = useState({});
   
-  // Escape key listener for modals
+  const [nome, setNome] = useState('');
+  const [fornecedorId, setFornecedorId] = useState('');
+  const [unidade, setUnidade] = useState('');
+  const [custo, setCusto] = useState('');
+  const [estoque, setEstoque] = useState('');
+  const [tamanhoEmbalagem, setTamanhoEmbalagem] = useState('1');
+  const [imagem, setImagem] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [zoomedImage, setZoomedImage] = useState(null);
+  const [historyItem, setHistoryItem] = useState(null);
+
+  const fileInputRef = React.useRef(null);
+
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -39,48 +56,26 @@ export default function MateriasPrimas({
     return () => window.removeEventListener('keydown', handleEsc);
   }, [setIsAddModalOpen]);
 
-  // New Material Form States
-  const [nome, setNome] = useState('');
-  const [fornecedorId, setFornecedorId] = useState('');
-  const [unidade, setUnidade] = useState('');
-  const [custo, setCusto] = useState('');
-  const [estoque, setEstoque] = useState('');
-  const [imagem, setImagem] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [zoomedImage, setZoomedImage] = useState(null);
-  const [historyItem, setHistoryItem] = useState(null);
-
-  const fileInputRef = React.useRef(null);
-
   const ITEMS_PER_PAGE = 20;
 
-  // Removido o filtro validInsumos para manter integridade com o cascading delete
   const filteredInsumos = insumosList.filter(i => 
     i.nome.toLowerCase().includes((searchQuery || '').toLowerCase()) || 
     (i.fornecedor || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
     i.id.toString().includes(searchQuery || '')
   );
 
-  const sortedInsumos = [...filteredInsumos].sort((a, b) => {
-    if (dashboardFilter === 'minimo') {
-      const isAMin = a.estoqueAtual > 0 && a.estoqueAtual <= 5;
-      const isBMin = b.estoqueAtual > 0 && b.estoqueAtual <= 5;
-      if (isAMin && !isBMin) return -1;
-      if (!isAMin && isBMin) return 1;
-    }
-    if (dashboardFilter === 'zerado') {
-      const isAZer = a.estoqueAtual === 0;
-      const isBZer = b.estoqueAtual === 0;
-      if (isAZer && !isBZer) return -1;
-      if (!isAZer && isBZer) return 1;
-    }
-    return b.id - a.id;
+  const filteredByDashboard = [...filteredInsumos].filter(i => {
+    if (dashboardFilter === 'minimo') return i.estoqueAtual > 0 && i.estoqueAtual <= 5;
+    if (dashboardFilter === 'zerado') return i.estoqueAtual <= 0;
+    return true;
   });
+
+  const sortedInsumos = [...filteredByDashboard].sort((a, b) => b.id - a.id);
 
   const totalPages = Math.ceil(sortedInsumos.length / ITEMS_PER_PAGE) || 1;
   const paginatedInsumos = sortedInsumos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleSaveMateriaPrima = () => {
+  const handleSaveMateriaPrima = async () => {
     const dataToValidate = {
       nome,
       fornecedorId,
@@ -103,61 +98,64 @@ export default function MateriasPrimas({
     }
 
     setFormErrors({});
-    const fornecedor = (fornecedoresList || []).find(f => String(f.id) === String(fornecedorId))?.fantasia || '';
     const valorNumerico = parseFloat(custo.replace(',', '.')) || 0;
     const estoqueNum = parseFloat(estoque) || 0;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    
-    if (editingItem) {
-      setInsumosList(insumosList.map(i => i.id === editingItem.id ? { 
-        ...i, 
-        nome, 
-        fornecedor, 
-        unidade, 
-        custoUnitario: valorNumerico, 
-        precos: i.precos ? (i.precos[0].valor === valorNumerico ? i.precos : [{ valor: valorNumerico, data: dataAtual }, ...i.precos]) : [{ valor: valorNumerico, data: dataAtual }],
-        estoqueAtual: estoqueNum, 
-        foto: imagePreview 
-      } : i));
-      setNotification({ title: 'Sucesso!', message: 'Matéria-prima atualizada com sucesso!', type: 'success' });
-      setTimeout(() => setNotification(null), 3000);
-      setEditingItem(null);
-    } else {
-      const newId = Math.max(0, ...insumosList.map(i => i.id)) + 1;
-      const newItem = { 
-        id: newId, 
-        nome, 
-        fornecedor, 
-        unidade, 
-        custoUnitario: valorNumerico, 
-        precos: [{ valor: valorNumerico, data: dataAtual }],
-        estoqueAtual: estoqueNum, 
-        dataCad: dataAtual, 
-        foto: imagePreview 
-      };
 
-      if (estoqueNum > 0) {
-        const newEntrada = {
-          id: String(newId), 
-          razao: nome,
-          fornecedor: fornecedor,
-          valor: valorNumerico.toFixed(2).replace('.', ','),
-          desconto: '0,00',
-          total: (valorNumerico * estoqueNum).toFixed(2).replace('.', ','),
-          emissao: dataAtual,
-          entrada: dataAtual,
-          cadastro: dataAtual,
-          status: 'concluida',
-          qtde: estoqueNum
-        };
-        setEntradasList(prev => [newEntrada, ...prev]);
+    const fornecedor = (fornecedoresList || []).find(f => String(f.id) === String(fornecedorId))?.fantasia || '';
+
+    const payload = {
+        nome,
+        unidade,
+        custoUnitario: valorNumerico,
+        precoEmbalagem: valorNumerico,
+        tamanhoEmbalagem: parseFloat(tamanhoEmbalagem) || 1,
+        estoqueAtual: estoqueNum,
+        fornecedorId,
+        foto: imagePreview
+    };
+
+    try {
+      if (editingItem) {
+        const res = await fetch(`http://localhost:3005/api/insumos/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          setNotification({ title: 'Sucesso!', message: 'Matéria-prima atualizada com sucesso!', type: 'success' });
+          setTimeout(() => setNotification(null), 3000);
+          setEditingItem(null);
+          if (fetchInsumos) await fetchInsumos();
+          if (fetchProdutos) await fetchProdutos();
+        } else {
+          const errorData = await res.json();
+          setNotification({ title: 'Erro', message: errorData.error || res.statusText, type: 'error' });
+        }
+      } else {
+        const res = await fetch('http://localhost:3005/api/insumos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          if (estoqueNum > 0 && fetchEntradas) await fetchEntradas();
+
+          setNotification({ title: 'Sucesso!', message: 'Matéria-prima cadastrada com sucesso!', type: 'success' });
+          setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
+          if (fetchInsumos) await fetchInsumos();
+          if (fetchProdutos) await fetchProdutos();
+        } else {
+          const errorData = await res.json();
+          setNotification({ title: 'Erro', message: errorData.error || res.statusText, type: 'error' });
+        }
       }
-
-      setInsumosList([newItem, ...insumosList]);
-      setNotification({ title: 'Sucesso!', message: 'Matéria-prima cadastrada com sucesso!', type: 'success' });
-      setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
+    } catch (e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha na comunicação com o servidor', type: 'error' });
     }
-    setNome(''); setFornecedorId(''); setUnidade(''); setCusto(''); setEstoque(''); setImagem(null); setImagePreview(null);
+
+    setNome(''); setFornecedorId(''); setUnidade(''); setCusto(''); setEstoque(''); setTamanhoEmbalagem('1'); setImagem(null); setImagePreview(null);
   };
 
   const handleDeleteItem = (item) => {
@@ -165,51 +163,79 @@ export default function MateriasPrimas({
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteItem = () => {
+  const confirmDeleteItem = async () => {
     if (!itemToDelete) return;
 
-    // 1. Remover da lista de insumos
-    setInsumosList(insumosList.filter(i => i.id !== itemToDelete.id));
+    try {
+      const res = await fetch(`http://localhost:3005/api/insumos/${itemToDelete.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (fetchInsumos) await fetchInsumos();
+        if (fetchProdutos) await fetchProdutos();
 
-    // 2. Remover registros relacionados em Entradas
-    if (setEntradasList) {
-      setEntradasList(prev => prev.filter(e => e.razao !== itemToDelete.nome));
+        if (setEntradasList) setEntradasList(prev => prev.filter(e => e.razao !== itemToDelete.nome));
+        if (setSaidaInsumosList) setSaidaInsumosList(prev => prev.filter(s => s.nome !== itemToDelete.nome));
+        
+        if (setProdutosList) {
+          setProdutosList(prev => prev.map(p => ({
+            ...p,
+            insumos: (p.insumos || []).filter(ins => ins.id !== itemToDelete.id)
+          })));
+        }
+
+        setNotification({ title: 'Excluído!', message: 'A matéria-prima foi removida com sucesso.', type: 'info' });
+        setTimeout(() => setNotification(null), 3000);
+        setShowDeleteModal(false);
+        setItemToDelete(null);
+        setEditingItem(null);
+        setIsAddModalOpen(false);
+      }
+    } catch(e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha ao deletar Insumo', type: 'error' });
+      setTimeout(() => setNotification(null), 3500);
     }
-
-    // 3. Remover registros relacionados em Saída de Insumos (contexto global)
-    if (setSaidaInsumosList) {
-      setSaidaInsumosList(prev => prev.filter(s => s.nome !== itemToDelete.nome));
-    }
-
-    // 4. Remover da receita de todos os produtos
-    if (setProdutosList) {
-      setProdutosList(prev => prev.map(p => ({
-        ...p,
-        insumos: (p.insumos || []).filter(ins => ins.id !== itemToDelete.id)
-      })));
-    }
-
-    setNotification({ title: 'Excluído!', message: 'A matéria-prima foi removida com sucesso de todo o sistema.', type: 'info' });
-    setTimeout(() => setNotification(null), 3000);
-    setShowDeleteModal(false);
-    setItemToDelete(null);
-    setEditingItem(null);
-    setIsAddModalOpen(false);
   };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setImagem(file);
-      setImagePreview(URL.createObjectURL(file));
+      if (!file.type.startsWith('image/')) {
+        setNotification({ title: 'Erro', message: 'Por favor, selecione um arquivo de imagem.', type: 'error' });
+        return;
+      }
+
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_SIZE) {
+        setNotification({ 
+          title: 'Arquivo Muito Grande', 
+          message: 'A imagem deve ter no máximo 10MB. Por favor, escolha uma imagem menor.', 
+          type: 'error' 
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleOpenEdit = (item) => {
-    setEditingItem(item); setNome(item.nome);
+    setEditingItem(item); 
+    setNome(item.nome);
     const foundForn = (fornecedoresList || []).find(f => f.fantasia === item.fornecedor);
     setFornecedorId(foundForn ? String(foundForn.id) : '');
-    setUnidade(item.unidade); setCusto(item.custoUnitario.toString().replace('.', ',')); setEstoque(item.estoqueAtual.toString());
+    setUnidade(item.unidade); 
+    
+    // Restaurar preço e tamanho da embalagem ou fallback para custo unitário
+    setCusto(item.precoEmbalagem ? item.precoEmbalagem.toString().replace('.', ',') : item.custoUnitario.toString().replace('.', ','));
+    setTamanhoEmbalagem(item.tamanhoEmbalagem ? item.tamanhoEmbalagem.toString() : "1");
+    
+    setEstoque(item.estoqueAtual.toString());
     setImagePreview(item.foto || null);
     setFormErrors({});
   };
@@ -298,7 +324,7 @@ export default function MateriasPrimas({
                   {(isMin || isZer) && <div className="size-2 rounded-full animate-pulse" style={{ backgroundColor: isMin ? '#F84910' : '#BA0000' }} />}
                   {insumo.id}
                 </div>
-                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{insumo.nome || '-'}</div>
+                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold uppercase">{insumo.nome || '-'}</div>
                 <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{insumo.fornecedor || '-'}</div>
                 <div className="w-[90px] text-center">{insumo.unidade || '-'}</div>
                 <div className="w-[120px] text-center font-bold text-[#606060] flex flex-col items-center justify-center leading-tight group relative">
@@ -315,19 +341,22 @@ export default function MateriasPrimas({
                   )}
                 </div>
                 <div className={`w-[110px] text-center font-bold py-1 rounded-md ${insumo.estoqueAtual <= 0 ? 'text-[#BA0000] bg-red-50' : insumo.estoqueAtual <= 5 ? 'text-[#F84910] bg-orange-50' : 'text-[#36BA6F] bg-[rgba(54,186,111,0.05)]'}`}>
-                  {insumo.estoqueAtual !== undefined && insumo.estoqueAtual !== null ? `${Number(insumo.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} ${insumo.unidade || ''}` : '-'}
+                  {insumo.estoqueAtual !== undefined && insumo.estoqueAtual !== null ? `${Number(insumo.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ${insumo.unidade || ''}` : '-'}
                 </div>
                 <div className="w-[40px] flex justify-center">
                    {insumo.foto ? (
                      <button 
                        onClick={() => setZoomedImage(insumo.foto)}
-                       className="flex size-7 items-center justify-center rounded-lg bg-[rgba(54,186,111,0.1)] text-[#36BA6F] hover:bg-[#36BA6F] hover:text-white transition-fluid cursor-pointer hover-scale shadow-sm"
-                       title="Ver Foto"
+                       className="flex size-8 items-center justify-center rounded-lg bg-orange-50 text-[#F84910] hover:bg-[#F84910] hover:text-white transition-all duration-300 cursor-pointer shadow-sm group"
+                       title="Visualizar Foto"
                      >
-                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                         <line x1="7" y1="17" x2="17" y2="7"></line>
+                         <polyline points="7 7 17 7 17 17"></polyline>
+                       </svg>
                      </button>
                    ) : (
-                     <div className="size-2 rounded-full bg-gray-200" title="Sem foto" />
+                     <div className="size-1.5 rounded-full bg-gray-200" title="Sem foto" />
                    )}
                 </div>
                 <div className="w-[80px] flex justify-center">
@@ -389,7 +418,7 @@ export default function MateriasPrimas({
             <div className="text-center">
               <h3 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">Tem certeza?</h3>
               <p className="font-inter text-sm text-[#606060] mt-1">
-                Esta ação removerá permanentemente a matéria-prima "{itemToDelete?.nome}" e todo o seu histórico de entradas e saídas.
+                Esta ação removerá permanentemente a matéria-prima "{(itemToDelete?.nome || '').toUpperCase()}" e todo o seu histórico de entradas e saídas.
               </p>
             </div>
             <div className="flex w-full gap-3 mt-2">
@@ -422,7 +451,7 @@ export default function MateriasPrimas({
               </button>
             </div>
             
-            <p className="text-xs text-[#a0a0a0] mb-4">Insumo: <span className="text-[#0D0D0D] font-semibold">{historyItem.nome}</span></p>
+            <p className="text-xs text-[#a0a0a0] mb-4">Insumo: <span className="text-[#0D0D0D] font-semibold uppercase">{historyItem.nome}</span></p>
 
             <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 table-scrollbar">
               {historyItem.precos && historyItem.precos.map((p, idx) => (
@@ -449,46 +478,7 @@ export default function MateriasPrimas({
             className="relative flex w-full max-w-[600px] flex-col gap-5 rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto table-scrollbar text-left"
             onMouseDown={e => e.stopPropagation()}
           >
-            {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${
-                notification.type === 'success' ? 'border-green-100 bg-green-50' : 
-                notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' : 
-                notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 
-                'border-red-100 bg-red-50'
-              }`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${
-                  notification.type === 'success' ? 'bg-green-500' : 
-                  notification.type === 'warning' ? 'bg-yellow-500' : 
-                  notification.type === 'info' ? 'bg-blue-500' : 
-                  'bg-red-500'
-                }`}>
-                   {notification.type === 'success' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                   ) : notification.type === 'warning' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   ) : notification.type === 'info' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                   ) : (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   )}
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${
-                    notification.type === 'success' ? 'text-green-800' : 
-                    notification.type === 'warning' ? 'text-yellow-800' : 
-                    notification.type === 'info' ? 'text-blue-800' : 
-                    'text-red-800'
-                  }`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${
-                    notification.type === 'success' ? 'text-green-600' : 
-                    notification.type === 'warning' ? 'text-yellow-600' : 
-                    notification.type === 'info' ? 'text-blue-600' : 
-                    'text-red-600'
-                  }`}>{notification.message}</p>
-                </div>
-                <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-              </div>
-            )}
+
             {/* Header */}
             <div className="flex h-[40px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
               <div className="flex items-center gap-2">
@@ -556,24 +546,37 @@ export default function MateriasPrimas({
                   <option value="g">g</option>
                   <option value="L">L</option>
                   <option value="ml">ml</option>
-                  <option value="100ml">100ml</option>
                   <option value="unid">unid</option>
-                  <option value="pacote">pacote</option>
-                  <option value="caixa">caixa</option>
                 </select>
                 {formErrors.unidade && <p className="text-[10px] text-red-500 mt-1">{formErrors.unidade}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Custo Unitário (R$)</label>
+                <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Preço da Embalagem (R$)</label>
                 <input 
                   type="text"
-                  placeholder="Ex: 45,50"
+                  placeholder="Ex: 50,00"
                   value={custo}
                   onChange={(e) => setCusto(e.target.value)}
                   className={`h-11 w-full rounded-lg border ${formErrors.custo ? 'border-red-500' : 'border-[#F0F0F3]'} bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm`}
                 />
                 {formErrors.custo && <p className="text-[10px] text-red-500 mt-1">{formErrors.custo}</p>}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Tamanho/Conteúdo (ex: 1.5)</label>
+                <input 
+                  type="number"
+                  step="any"
+                  min="0.001"
+                  placeholder="Ex: 1.5"
+                  value={tamanhoEmbalagem}
+                  onChange={(e) => setTamanhoEmbalagem(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm"
+                />
+                <p className="text-[9px] text-[#F84910] mt-1 font-medium">
+                  Custo base: R$ { ( (parseFloat(custo.replace(',', '.')) || 0) / (parseFloat(tamanhoEmbalagem) || 1) ).toFixed(2) } por {unidade || 'unidade'}
+                </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -583,7 +586,9 @@ export default function MateriasPrimas({
                 <div className="relative">
                   <input 
                     type="number"
-                    placeholder="Ex: 100"
+                    step="any"
+                    min="0"
+                    placeholder="Ex: 1,5"
                     value={estoque}
                     onChange={(e) => setEstoque(e.target.value)}
                     disabled={!!editingItem}

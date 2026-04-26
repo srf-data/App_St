@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 
 export default function Fornecedores({ 
+  fetchFornecedores,
   isAddModalOpen, 
   setIsAddModalOpen, 
   searchQuery, 
-  fornecedoresList, 
+  fornecedoresList = [], 
   setFornecedoresList,
   insumosList = [],
-  setInsumosList,
-  produtosList = [],
-  setProdutosList
+  setProdutosList,
+  setNotification
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [fornToDelete, setFornToDelete] = useState(null);
-  const [notification, setNotification] = useState(null);
+
   
   // Escape Key listener for Modais
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function Fornecedores({
   const totalPages = Math.ceil(filteredFornecedores.length / ITEMS_PER_PAGE) || 1;
   const paginatedFornecedores = filteredFornecedores.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleSaveFornecedor = () => {
+  const handleSaveFornecedor = async () => {
     if (!razaoSocial.trim()) return;
 
     let finalCnpj = cnpj.trim();
@@ -78,17 +78,37 @@ export default function Fornecedores({
       }
     }
 
-    if (editingItem) {
-      setFornecedoresList(fornecedoresList.map(f => f.id === editingItem.id ? { ...f, razaoSocial, fantasia, cnpj: finalCnpj, cidade, estado, contato } : f));
-      setNotification({ title: 'Sucesso!', message: 'Fornecedor atualizado com sucesso!', type: 'success' });
+    const payload = { razaoSocial, fantasia, cnpj: finalCnpj, cidade, estado, contato };
+
+    try {
+      if (editingItem) {
+        const res = await fetch(`http://localhost:3005/api/fornecedores/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          setNotification({ title: 'Sucesso!', message: 'Fornecedor atualizado com sucesso!', type: 'success' });
+          setTimeout(() => setNotification(null), 3000);
+          setEditingItem(null);
+          if (fetchFornecedores) await fetchFornecedores();
+        }
+      } else {
+        const res = await fetch('http://localhost:3005/api/fornecedores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          setNotification({ title: 'Sucesso!', message: 'Fornecedor cadastrado com sucesso!', type: 'success' });
+          setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
+          if (fetchFornecedores) await fetchFornecedores();
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: 'Falha na comunicação com o servidor', type: 'error' });
       setTimeout(() => setNotification(null), 3000);
-      setEditingItem(null);
-    } else {
-      const newId = Math.max(0, ...fornecedoresList.map(f => f.id)) + 1;
-      const newItem = { id: newId, razaoSocial, fantasia, cnpj: finalCnpj, cidade, estado, contato };
-      setFornecedoresList([newItem, ...fornecedoresList]);
-      setNotification({ title: 'Sucesso!', message: 'Fornecedor cadastrado com sucesso!', type: 'success' });
-      setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
     }
 
     // Reset
@@ -105,44 +125,47 @@ export default function Fornecedores({
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteFornecedor = () => {
+  const confirmDeleteFornecedor = async () => {
     if (!fornToDelete) return;
 
-    // 1. Identificar insumos vinculados a este fornecedor
-    const insumosToRemove = insumosList.filter(i => 
-      (i.fornecedor || '').toLowerCase().trim() === (fornToDelete.fantasia || '').toLowerCase().trim()
-    );
-    const insumoIdsToRemove = insumosToRemove.map(i => i.id);
+    try {
+      const res = await fetch(`http://localhost:3005/api/fornecedores/${fornToDelete.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (fetchFornecedores) await fetchFornecedores();
 
-    // 2. Remover do estado global de insumos
-    if (setInsumosList) {
-      setInsumosList(prev => prev.filter(i => 
-        (i.fornecedor || '').toLowerCase().trim() !== (fornToDelete.fantasia || '').toLowerCase().trim()
-      ));
+        // Limpeza visual de insumos vinculados
+        const insumosToRemove = insumosList?.filter(i => 
+          (i.fornecedor || '').toLowerCase().trim() === (fornToDelete.fantasia || '').toLowerCase().trim()
+        ) || [];
+        const insumoIdsToRemove = insumosToRemove.map(i => i.id);
+
+        if (setInsumosList) setInsumosList(prev => prev.filter(i => !insumoIdsToRemove.includes(i.id)));
+        if (setProdutosList && insumoIdsToRemove.length > 0) {
+          setProdutosList(prev => prev.map(p => ({
+            ...p,
+            insumos: (p.insumos || []).filter(pi => !insumoIdsToRemove.includes(pi.id))
+          })));
+        }
+
+        setNotification({ 
+          title: 'Excluído!', 
+          message: `O fornecedor apagado e ${insumosToRemove.length} insumo(s) associado(s) foram removidos da tela.`, 
+          type: 'info' 
+        });
+
+        setTimeout(() => setNotification(null), 3500);
+        setShowDeleteModal(false);
+        setFornToDelete(null);
+        setEditingItem(null);
+        setIsAddModalOpen(false);
+      }
+    } catch(e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: 'Falha ao deletar Fornecedor', type: 'error' });
+      setTimeout(() => setNotification(null), 3500);
     }
-
-    // 3. Remover desses insumos das receitas de produtos
-    if (setProdutosList && insumoIdsToRemove.length > 0) {
-      setProdutosList(prev => prev.map(p => ({
-        ...p,
-        insumos: (p.insumos || []).filter(pi => !insumoIdsToRemove.includes(pi.id))
-      })));
-    }
-
-    // 4. Remover o fornecedor
-    setFornecedoresList(fornecedoresList.filter(f => f.id !== fornToDelete.id));
-    
-    setNotification({ 
-      title: 'Excluído!', 
-      message: `O fornecedor e ${insumosToRemove.length} insumo(s) associado(s) foram removidos.`, 
-      type: 'info' 
-    });
-
-    setTimeout(() => setNotification(null), 3500);
-    setShowDeleteModal(false);
-    setFornToDelete(null);
-    setEditingItem(null);
-    setIsAddModalOpen(false);
   };
 
   const handleOpenEdit = (item) => {
@@ -282,24 +305,7 @@ export default function Fornecedores({
             className="relative flex w-full max-w-[600px] flex-col gap-5 rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto table-scrollbar text-left"
             onMouseDown={e => e.stopPropagation()}
           >
-            {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
-                   {notification.type === 'success' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                   ) : notification.type === 'info' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                   ) : (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   )}
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
-                </div>
-                <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-              </div>
-            )}
+
             <div className="flex h-[40px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
               <div className="flex items-center gap-2">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-[rgba(248,73,16,0.1)] text-[#F84910]">

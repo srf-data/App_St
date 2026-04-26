@@ -10,7 +10,46 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
 
   const formatBRL = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  // --- Date Helpers ---
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="flex flex-col gap-1.5 rounded-xl border border-white/40 bg-white/85 p-3.5 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-md animate-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-2">
+          <div className="size-2.5 rounded-full shadow-sm" style={{ backgroundColor: data.color || payload[0].color }} />
+          <p className="font-plus-jakarta text-[11px] font-semibold uppercase tracking-wider text-[#8B8B8B]">{data.name}</p>
+        </div>
+        <p className="font-plus-jakarta text-lg font-extrabold text-[#0D0D0D]">
+          {formatBRL(payload[0].value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomAreaTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="flex flex-col gap-3 rounded-xl border border-white/40 bg-white/85 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <p className="font-plus-jakarta text-[13px] font-extrabold text-[#0D0D0D] border-b border-gray-100 pb-2">{label}</p>
+        <div className="flex flex-col gap-2">
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="font-plus-jakarta text-[11px] font-semibold text-[#606060]">{entry.name}</span>
+              </div>
+              <span className="font-plus-jakarta text-[12px] font-black text-[#0D0D0D]">{formatBRL(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
   const parseDateString = (str) => {
     if (!str || typeof str !== 'string') return new Date();
     const [d, m, y] = str.split('/').map(Number);
@@ -45,19 +84,24 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
     return true;
   };
 
-  // --- Statistics Calculations (Real Data) ---
   const todayStr = new Date().toLocaleDateString('pt-BR');
-  const totalItensHoje = [...produtos, ...insumos].filter(item => item.dataCad === todayStr).length;
-  const totalEstoqueGeral = insumos.reduce((sum, item) => sum + (item.estoqueAtual || 0), 0);
+  const totalItensHoje = [...produtos, ...insumos].filter(item => {
+    if (!item.dataCad) return false;
+    // Handle both YYYY-MM-DD and DD/MM/YYYY
+    if (item.dataCad.includes('-')) {
+      const [y, m, d] = item.dataCad.split('-');
+      return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}` === todayStr;
+    }
+    return item.dataCad === todayStr;
+  }).length;
   
-  const insumosMinimo = insumos.filter(i => i.estoqueAtual > 0 && i.estoqueAtual <= 5);
-  const insumosZerado = insumos.filter(i => i.estoqueAtual === 0);
+  const insumosMinimo = insumos.filter(i => (i.estoqueAtual || 0) > 0 && (i.estoqueAtual || 0) <= 5);
+  const insumosZerado = insumos.filter(i => (i.estoqueAtual || 0) <= 0);
 
-  // Investment vs Profit Margin based on filtreInvestimento
   const getInvestStats = () => {
     const range = customDay ? 'CustomDay' : filtroInvestimento;
     
-    // Investimento: Entradas de Insumos no período
+    // Investimento: Entradas de Insumos no período (Compras de Matéria-prima)
     const investTotal = entradas
       .filter(e => e.fornecedor !== 'Produção Própria')
       .filter(e => isInRange(e.entrada, range))
@@ -66,12 +110,19 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
         return sum + val;
       }, 0);
 
-    // Lucro Real (Vendas): Saídas de Produtos no período
+    // Lucro Real = Vendas (Faturamento) - Custo de Produção daqueles itens
     const lucroTotal = saidas
       .filter(s => isInRange(s.data, range))
       .reduce((sum, s) => {
-        const val = parseFloat(String(s.total).replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-        return sum + val;
+        const totalVenda = parseFloat(String(s.total).replace('R$', '').replace('.', '').replace(',', '.')) || 0;
+        
+        // Buscar o produto para saber o custo de produção dele
+        const prod = produtos.find(p => p.id === s.produtoId);
+        // O campo 'custo' no frontend vem formatado como "R$ 10,00", precisamos limpar
+        const custoUnitario = prod ? parseFloat(String(prod.custo).replace('R$', '').replace('.', '').replace(',', '.')) : 0;
+        const custoTotalProducao = (Number(s.qtde) || 0) * custoUnitario;
+        
+        return sum + (totalVenda - custoTotalProducao);
       }, 0);
 
     return { investTotal, lucroTotal };
@@ -84,7 +135,6 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
     { name: 'Margem de Lucro', value: lucroTotal, color: '#8AF1B9' },
   ];
 
-  // --- Line Chart Data (Financial Intelligence) ---
   const getChartData = () => {
     const range = customDay ? 'CustomDay' : tab;
     
@@ -112,7 +162,6 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
       return (parseFloat(s.qtde) || 0) * custo;
     };
 
-    // Agregação Final baseada na aba selecionada
     let finalEntradas = [];
     let finalSaidas = [];
 
@@ -225,9 +274,9 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
           <div className="mt-4">
             <h2 className="font-plus-jakarta text-[22px] font-bold text-[#0D0D0D]">{totalItensHoje} {totalItensHoje === 1 ? 'Item' : 'Itens'}</h2>
             <div className="mt-1 flex items-center justify-between">
-              <span className="font-plus-jakarta text-xs font-medium text-[#606060]">{(produtos.length + insumos.length)} tipos de itens no total</span>
+              <span className="font-plus-jakarta text-[11px] font-medium text-[#8B8B8B]">Total de {(produtos.length + insumos.length)} itens em estoque</span>
               <button onClick={() => onNavigate('Produtos', 'hoje')} className="flex items-center gap-1 font-plus-jakarta text-xs font-medium text-[#F84910] hover:underline cursor-pointer">
-                Ver Produtos <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                Ver Novos <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </button>
             </div>
           </div>
@@ -315,12 +364,7 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
                   tickLine={false} 
                   tickFormatter={(v) => `R$ ${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`}
                 />
-                <Tooltip 
-                  formatter={(value, name) => [formatBRL(value), name]}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '12px' }} 
-                  itemStyle={{ fontWeight: '600', fontSize: '12px', padding: '2px 0' }}
-                  labelStyle={{ fontWeight: '800', color: '#0D0D0D', marginBottom: '8px', fontSize: '13px', fontFamily: 'Plus Jakarta Sans' }}
-                />
+                <Tooltip content={<CustomAreaTooltip />} />
                 <Area type="monotone" name="Entrada" dataKey="entradas" stroke="#8AF1B9" strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" />
                 <Area type="monotone" name="Saída" dataKey="saidas" stroke="#F84910" strokeWidth={2} fillOpacity={1} fill="url(#colorSaidas)" />
               </AreaChart>
@@ -339,10 +383,26 @@ export default function PaginaInicial({ produtos = [], insumos = [], entradas = 
             )}
           </div>
           <div className="h-[180px] w-full flex items-center justify-center relative mt-2">
-            <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={dataInvestimentos} innerRadius={65} outerRadius={85} paddingAngle={3} dataKey="value" stroke="none">{dataInvestimentos.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Pie><Tooltip formatter={(v) => formatBRL(v)} /></PieChart></ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="font-plus-jakarta text-lg font-extrabold text-[#0D0D0D]">{formatBRL(lucroTotal)}</span>
-              <span className="font-plus-jakarta text-[9px] text-[#606060] uppercase text-center font-bold">Vendas</span>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie 
+                  data={dataInvestimentos} 
+                  innerRadius={65} 
+                  outerRadius={85} 
+                  paddingAngle={3} 
+                  dataKey="value" 
+                  stroke="none"
+                >
+                  {dataInvestimentos.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+              <span className="font-plus-jakarta text-lg font-extrabold text-[#0D0D0D] leading-none">{formatBRL(lucroTotal)}</span>
+              <span className="font-plus-jakarta text-[10px] text-[#8B8B8B] text-center font-semibold mt-1">Lucro</span>
             </div>
           </div>
           <div className="mt-8 flex flex-col gap-3 px-2">

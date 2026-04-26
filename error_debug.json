@@ -1,0 +1,22 @@
+{
+  "message": "\nInvalid `tx.entradaInsumos.create()` invocation in\nC:\\Users\\shaya\\Downloads\\App\\App_St\\server\\index.cjs:811:57\n\n  808     });\n  809 }\n  810 \n→ 811 const entrada = await tx.entradaInsumos.create({\n        data: {\n          Cod_Insumo: 4,\n          Nome_Insumo: \"Pávio\",\n          Nome_Fornecedor: \"Essencias e Bem Estar\",\n          ~~~~~~~~~~~~~~~\n          Quantidade: 1,\n          Valor_Unitario: 10,\n          Desconto: 5,\n          Total: 5,\n      ?   DtEmissao?: DateTime,\n      ?   DtEntrada?: DateTime,\n      ?   DtCadastro?: DateTime\n        }\n      })\n\nUnknown argument `Nome_Fornecedor`. Available options are marked with ?.",
+  "stack": "PrismaClientValidationError: \nInvalid `tx.entradaInsumos.create()` invocation in\nC:\\Users\\shaya\\Downloads\\App\\App_St\\server\\index.cjs:811:57\n\n  808     });\n  809 }\n  810 \n→ 811 const entrada = await tx.entradaInsumos.create({\n        data: {\n          Cod_Insumo: 4,\n          Nome_Insumo: \"Pávio\",\n          Nome_Fornecedor: \"Essencias e Bem Estar\",\n          ~~~~~~~~~~~~~~~\n          Quantidade: 1,\n          Valor_Unitario: 10,\n          Desconto: 5,\n          Total: 5,\n      ?   DtEmissao?: DateTime,\n      ?   DtEntrada?: DateTime,\n      ?   DtCadastro?: DateTime\n        }\n      })\n\nUnknown argument `Nome_Fornecedor`. Available options are marked with ?.\n    at ar (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:10:1374)\n    at zr.handleRequestError (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:65:7929)\n    at zr.handleAndLogRequestError (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:65:7581)\n    at zr.request (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:65:7288)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async a (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:75:6862)\n    at async prisma.$transaction.timeout (C:\\Users\\shaya\\Downloads\\App\\App_St\\server\\index.cjs:811:33)\n    at async Proxy._transactionWithCallback (C:\\Users\\shaya\\Downloads\\App\\App_St\\node_modules\\@prisma\\client\\runtime\\client.js:75:4800)\n    at async C:\\Users\\shaya\\Downloads\\App\\App_St\\server\\index.cjs:752:28",
+  "body": {
+    "fornecedor": "Essencias e Bem Estar",
+    "insumos": [
+      {
+        "id": "1777158080737",
+        "nome": "Pávio",
+        "fornecedor": "Essencias e Bem Estar",
+        "qtde": 1,
+        "custoUnitario": 10,
+        "acaoPreco": "atualizar",
+        "qtyComercial": 1,
+        "sizeEmbalagem": 1,
+        "priceEmbalagem": 10
+      }
+    ],
+    "descontoTotal": "5"
+  },
+  "timestamp": "2026-04-25T23:01:22.120Z"
+}

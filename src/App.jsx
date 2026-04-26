@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import Users from './Users'
 
-// Helper to validate email format
 const isValidEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(String(email).toLowerCase());
@@ -14,17 +13,7 @@ import brandIcon from './assets/brand-logo-new.svg'
 import loginVectors from './assets/login-vectors.svg'
 import studioSolartLogo from './assets/studio-solart.jpg'
 
-const initialFakeUsers = [
-  {
-    id: 1,
-    nome: 'Studio Solart',
-    email: 'admin@studiosolart.com',
-    senha: 'admin',
-    dataCad: '01/01/2026',
-    ultimoAcc: '06/04/2026 - 15:40',
-    foto: studioSolartLogo
-  }
-];
+
 
 function App() {
   const [showPassword, setShowPassword] = useState(false)
@@ -36,9 +25,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   
   const [loginPhase, setLoginPhase] = useState('login')
-  const [fakeUsersList, setFakeUsersList] = useState(initialFakeUsers)
   
-  // Initialize state from localStorage if available
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return localStorage.getItem('solart_isLoggedIn') === 'true';
   })
@@ -51,13 +38,11 @@ function App() {
   
   const [notification, setNotification] = useState(null)
   
-  // Load credentials from localStorage
   useEffect(() => {
     const savedEmail = localStorage.getItem('solart_email');
     if (savedEmail) setUsername(savedEmail);
   }, []);
 
-  // Persist session to localStorage
   useEffect(() => {
     localStorage.setItem('solart_isLoggedIn', isLoggedIn);
     if (currentUser) {
@@ -178,8 +163,6 @@ function App() {
           localStorage.removeItem('solart_currentUser');
         }} 
         currentUser={currentUser}
-        fakeUsersList={fakeUsersList}
-        setFakeUsersList={setFakeUsersList}
       />
     );
   }

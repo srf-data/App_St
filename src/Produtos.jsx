@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 import { productSchema, formatZodError } from './utils/validators';
 
 export default function Produtos({ 
-  produtosList, setProdutosList, insumosList, fornecedoresList, entradasList, setEntradasList, saidasList, setSaidasList, isAddModalOpen, setIsAddModalOpen, searchQuery, dashboardFilter, clearFilter 
+  fetchProdutos, fetchInsumos, fetchEntradas, produtosList, setProdutosList, insumosList, setInsumosList, fornecedoresList, entradasList, setEntradasList, saidasList, setSaidasList, isAddModalOpen, setIsAddModalOpen, searchQuery, dashboardFilter, clearFilter, setNotification 
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduto, setSelectedProduto] = useState(null);
@@ -11,7 +12,6 @@ export default function Produtos({
   const [productToDelete, setProductToDelete] = useState(null);
   const [insumoIndexToDelete, setInsumoIndexToDelete] = useState(null);
 
-  // Escape key listener for modals
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -27,64 +27,167 @@ export default function Produtos({
   
   const today = new Date().toLocaleDateString('pt-BR');
 
-  // New Product Form States
   const [nomeProduto, setNomeProduto] = useState('');
   const [qtdeInicial, setQtdeInicial] = useState('0');
   const [insumosAdicionados, setInsumosAdicionados] = useState([]);
   
-  // Add Insumo Selection State
   const [curInsumoId, setCurInsumoId] = useState('');
   const [curInsumoQtde, setCurInsumoQtde] = useState('1');
   const [curInsumoUnidade, setCurInsumoUnidade] = useState('');
   const [curInsumoPreco, setCurInsumoPreco] = useState('');
 
-  // Custom unit filtering logic
+  const [precoVenda, setPrecoVenda] = useState('0');
+  const [comissaoPorcentagem, setComissaoPorcentagem] = useState('0');
+  const [lucroPorcentagem, setLucroPorcentagem] = useState('120'); // Valor padrão 120%
+
+  const unidadesBase = {
+    'ml': 1, 'ml.': 1, 'mililitro': 1, 'mililitros': 1,
+    'l': 1000, 'l.': 1000, 'litro': 1000, 'litros': 1000,
+    'g': 1, 'grama': 1, 'gramas': 1,
+    'kg': 1000, 'quilo': 1000, 'quilos': 1000, 'kilo': 1000,
+    'un': 1, 'unid': 1, 'unidade': 1, 'unidades': 1,
+    '100ml': 100
+  };
+
+  const getFactor = (unit) => {
+    if (!unit) return 1;
+    const u = unit.toLowerCase().trim().replace('.', '');
+    if (u === 'kg' || u === 'l' || u === 'litro' || u === 'quilo' || u === 'litros' || u === 'quilos') return 1000;
+    if (u === 'g' || u === 'ml' || u === 'grama' || u === 'unid' || u === 'unidade' || u === 'un' || u === 'mililitro') return 1;
+    if (u === '100ml') return 100;
+    return 1;
+  };
+
   const getCompatibleUnits = (baseUnit) => {
     if (!baseUnit) return [];
-    const b = baseUnit.toLowerCase();
-    if (b === 'kg' || b === 'g' || b === 'grama') return ['kg', 'g', 'grama'];
-    if (b === 'l' || b === 'litro' || b === 'ml') return ['L', 'litro', 'ml'];
+    const b = baseUnit.toLowerCase().trim().replace('.', '');
+    if (b === 'kg' || b === 'g' || b === 'grama' || b === 'quilo') return ['kg', 'g'];
+    if (b === 'l' || b === 'litro' || b === 'ml') return ['L', 'ml'];
     if (b === '100ml' || b === 'ml') return ['100ml', 'ml'];
-    if (b === 'unid' || b === 'unidade') return ['unid', 'unidade'];
+    if (b === 'unid' || b === 'unidade' || b === 'un') return ['unid'];
     return [baseUnit];
   };
 
   const availableUnits = getCompatibleUnits(insumosList.find(i => i.id.toString() === curInsumoId)?.unidade);
 
   // Notification State
-  const [notification, setNotification] = useState(null);
+
   const [formErrors, setFormErrors] = useState({});
 
   const ITEMS_PER_PAGE = 20;
 
-  // Refined filtering and sorting
   const filteredProdutos = produtosList.filter(p => 
     p.nome.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
     p.id.toString().includes(searchQuery || '')
   );
 
-  const sortedProdutos = [...filteredProdutos].sort((a, b) => {
+  const filteredByDashboard = [...filteredProdutos].filter(p => {
     if (dashboardFilter === 'hoje') {
-      const isAHoje = a.dataCad === today;
-      const isBHoje = b.dataCad === today;
-      if (isAHoje && !isBHoje) return -1;
-      if (!isAHoje && isBHoje) return 1;
+      if (!p.dataCad) return false;
+      if (p.dataCad.includes('-')) {
+        const [y, m, d] = p.dataCad.split('-');
+        return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}` === today;
+      }
+      return p.dataCad === today;
     }
-    return b.id - a.id; // Default sort by ID descending
+    return true;
   });
+
+  const sortedProdutos = [...filteredByDashboard].sort((a, b) => b.id - a.id);
 
   const totalPages = Math.ceil(sortedProdutos.length / ITEMS_PER_PAGE) || 1;
   const paginatedProdutos = sortedProdutos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const calculateProportionalCost = (precoInsumo, unitInsumo, qtdUsada, unitUsada) => {
+
+
+    const factorInsumo = getFactor(unitInsumo);
+    const factorUsado = getFactor(unitUsada);
+    
+    const pricePerBaseUnit = Number(precoInsumo) / factorInsumo;
+    const qtyInBaseUnit = Number(qtdUsada) * factorUsado;
+    
+    return qtyInBaseUnit * pricePerBaseUnit;
+  };
+
   const getDynamicCostNum = (produto) => {
-    if (!produto.insumos || !Array.isArray(produto.insumos)) {
-      return parseFloat(String(produto.custo || '0').replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-    }
-    return produto.insumos.reduce((total, item) => {
+    const rawCost = (produto.insumos || []).reduce((total, item) => {
       const currentInsumo = insumosList.find(i => i.id.toString() === item.id.toString());
       const priceToUse = currentInsumo ? currentInsumo.custoUnitario : (item.custoUnitario || 0);
-      return total + (item.qtde * priceToUse);
+      const unitInsumo = currentInsumo ? currentInsumo.unidade : (item.originalUnit || item.unidade);
+      
+      const proportionalCost = calculateProportionalCost(priceToUse, unitInsumo, item.qtde, item.unidade);
+      return total + proportionalCost;
     }, 0);
+
+    if (rawCost === 0 && produto.custo) {
+        return parseFloat(String(produto.custo).replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return rawCost;
+  };
+
+  const currentCustoProducao = insumosAdicionados.reduce((sum, item) => {
+    const currentInsumo = insumosList.find(i => i.id.toString() === item.id.toString());
+    const priceToUse = currentInsumo ? currentInsumo.custoUnitario : (item.custoUnitario || 0);
+    const unitInsumo = currentInsumo ? currentInsumo.unidade : (item.originalUnit || item.unidade);
+    return sum + calculateProportionalCost(priceToUse, unitInsumo, item.qtde, item.unidade);
+  }, 0);
+
+  const calculatePriceFromProfit = (profitPct, commPct, costProd) => {
+    const ll = (parseFloat(profitPct) || 0) / 100;
+    const cp = parseFloat(costProd) || 0;
+    const com = (parseFloat(commPct) || 0) / 100;
+
+    const numerator = (ll + 1) * cp * (1 - com);
+    const denominator = 1 - (ll + 1) * com;
+
+    if (denominator <= 0) return 0;
+    return numerator / denominator;
+  };
+
+  const calculateProfitFromPrice = (priceVal, commPct, costProd) => {
+    const pv = parseFloat(priceVal) || 0;
+    const cp = parseFloat(costProd) || 0;
+    const com = (parseFloat(commPct) || 0) / 100;
+
+    const comissaoValor = (pv - cp) * com;
+    const custoTotal = cp + comissaoValor;
+
+    if (custoTotal <= 0) return 0;
+    return (pv / custoTotal - 1) * 100;
+  };
+
+  useEffect(() => {
+    // Se estivermos editando e o preço já veio do banco (seja por vendaNum ou string),
+    // respeitamos o valor do banco e não sobrescrevemos.
+    const rawVenda = editingProduto ? String(editingProduto.venda || '0') : '0';
+    const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    const savedPrice = editingProduto?.vendaNum || parsedVenda;
+
+    if (editingProduto && 
+        precoVenda === String(savedPrice) && 
+        savedPrice > 0) {
+       return; 
+    }
+
+    // Se o usuário já alterou o preço manualmente, não queremos sobrescrever.
+    // O useEffect só deve agir se o preço atual ainda for o "padrão" ou zero.
+    const calculated = calculatePriceFromProfit(lucroPorcentagem, comissaoPorcentagem, currentCustoProducao);
+    if (calculated > 0) {
+      setPrecoVenda(calculated.toFixed(2));
+    }
+  }, [currentCustoProducao, comissaoPorcentagem, lucroPorcentagem]);
+
+  const handlePriceChange = (val) => {
+    setPrecoVenda(val);
+    const newProfit = calculateProfitFromPrice(val, comissaoPorcentagem, currentCustoProducao);
+    setLucroPorcentagem(newProfit.toFixed(2));
+  };
+
+  const handleProfitPctChange = (val) => {
+    setLucroPorcentagem(val);
+    const newPrice = calculatePriceFromProfit(val, comissaoPorcentagem, currentCustoProducao);
+    setPrecoVenda(newPrice.toFixed(2));
   };
 
   const handleAddInsumo = () => {
@@ -96,54 +199,98 @@ export default function Produtos({
       const selectedPrice = curInsumoPreco ? parseFloat(curInsumoPreco) : insumo.custoUnitario;
       const usageUnit = curInsumoUnidade || insumo.unidade;
       
-      // Conversion logic
-      let conversionFactor = 1;
-      const baseUnit = insumo.unidade.toLowerCase();
-      const uUnit = usageUnit.toLowerCase();
-      
-      if (baseUnit === 'kg' && uUnit === 'g') conversionFactor = 0.001;
-      else if (baseUnit === 'l' && uUnit === 'ml') conversionFactor = 0.001;
-      else if (baseUnit === 'litro' && uUnit === 'ml') conversionFactor = 0.001;
-      else if (baseUnit === '100ml' && uUnit === 'ml') conversionFactor = 0.01;
-      else if (baseUnit === 'g' && uUnit === 'kg') conversionFactor = 1000;
-      
-      const qtdeNaUnidadeBase = requestedQtde * conversionFactor;
+      const proportionalCost = calculateProportionalCost(selectedPrice, insumo.unidade, requestedQtde, usageUnit);
 
-      if (qtdeNaUnidadeBase > (insumo.estoqueAtual || 0)) {
-        setNotification({ title: 'Limite de Estoque Excedido', message: `A quantidade de ${requestedQtde} ${usageUnit} ultrapassa a capacidade máxima em estoque do insumo ${insumo.nome} (${insumo.estoqueAtual} ${insumo.unidade}).` });
+      const existingIdx = insumosAdicionados.findIndex(i => i.id.toString() === insumo.id.toString());
+      const factorInsumo = getFactor(insumo.unidade);
+      const factorUsado = getFactor(usageUnit);
+      
+      const requestedInBase = requestedQtde * factorUsado;
+      const existingInBase = existingIdx !== -1 ? (insumosAdicionados[existingIdx].qtde * getFactor(insumosAdicionados[existingIdx].unidade)) : 0;
+      
+      const prodQty = parseFloat(qtdeInicial) || 0;
+      const totalRequestedInBasePerUnit = requestedInBase + existingInBase;
+      const totalNeededInBase = totalRequestedInBasePerUnit * (prodQty || 1);
+      
+      const stockInBase = (insumo.estoqueAtual || 0) * factorInsumo;
+
+      if (Math.round(totalNeededInBase * 10000) / 10000 > Math.round(stockInBase * 10000) / 10000) {
+        const stockDisplay = insumo.estoqueAtual;
+        const stockUnit = insumo.unidade;
+        const totalNeededDisplay = (totalRequestedInBasePerUnit / factorUsado).toFixed(2).replace(/\.?0+$/, '');
+        setNotification({ 
+          title: 'Limite de Estoque Excedido', 
+          message: `Para produzir ${prodQty || 1} unidades, você precisa de um total de ${totalNeededDisplay}${usageUnit} de ${insumo.nome}, mas o estoque é de apenas ${stockDisplay}${stockUnit}.` 
+        });
         return;
       }
       
-      const adjustedCost = selectedPrice * conversionFactor;
       
-      setInsumosAdicionados([...insumosAdicionados, { 
-        ...insumo, 
-        qtde: requestedQtde, 
-        unidade: usageUnit, 
-        custoUnitario: adjustedCost,
-        originalUnit: insumo.unidade,
-        originalPrice: selectedPrice,
-        fatorConversao: conversionFactor,
-        qtdeNaUnidadeBase: qtdeNaUnidadeBase
-      }]);
+      if (existingIdx !== -1) {
+          const newList = [...insumosAdicionados];
+          const item = newList[existingIdx];
+          
+          // Converter a nova quantidade para a unidade que já está na lista
+          const factorUsadoAgora = getFactor(usageUnit);
+          const factorExistente = getFactor(item.unidade);
+          const requestedInExistingUnit = (requestedQtde * factorUsadoAgora) / factorExistente;
+          
+          const newQtdeTotal = item.qtde + requestedInExistingUnit;
+          
+          newList[existingIdx] = {
+              ...item,
+              qtde: newQtdeTotal,
+              valorProporcional: calculateProportionalCost(selectedPrice, insumo.unidade, newQtdeTotal, item.unidade)
+          };
+          setInsumosAdicionados(newList);
+      } else {
+          setInsumosAdicionados([...insumosAdicionados, { 
+            ...insumo, 
+            qtde: requestedQtde, 
+            unidade: usageUnit, 
+            custoUnitario: selectedPrice, // Agora guardamos o preço BRUTO por pacote (L, kg, etc)
+            valorProporcional: proportionalCost,
+            originalUnit: insumo.unidade
+          }]);
+      }
       setCurInsumoId(''); setCurInsumoQtde('1'); setCurInsumoUnidade(''); setCurInsumoPreco(''); setNotification(null);
     }
   };
 
   const updateInsumoQtde = (index, delta) => {
     const newList = [...insumosAdicionados];
-    const newQtde = newList[index].qtde + delta;
+    const item = newList[index];
+    const newQtde = item.qtde + delta;
     if (newQtde <= 0) return;
     
-    const factor = newList[index].fatorConversao || 1;
-    const qtdeNaUnidadeBase = newQtde * factor;
+    // Pegamos os dados ATUAIS do insumo da lista global para garantir o estoque mais recente
+    const insumoReal = insumosList.find(i => i.id.toString() === item.id.toString());
+    const estoqueAtualReal = insumoReal ? insumoReal.estoqueAtual : (item.estoqueAtual || 0);
 
-    if (qtdeNaUnidadeBase > (newList[index].estoqueAtual || 0)) {
-      setNotification({ title: 'Limite de Estoque Excedido', message: `A quantidade de ${newQtde} ${newList[index].unidade} ultrapassa a capacidade máxima em estoque do insumo ${newList[index].nome} (${newList[index].estoqueAtual} ${newList[index].originalUnit || newList[index].unidade}).` });
+    const factorInsumo = getFactor(item.originalUnit || item.unidade);
+    const factorUsado = getFactor(item.unidade);
+    
+    const prodQty = parseFloat(qtdeInicial) || 0;
+    const totalNeededInBase = (newQtde * (prodQty || 1)) * factorUsado;
+    const stockInBase = estoqueAtualReal * factorInsumo;
+
+    if (delta > 0 && totalNeededInBase > stockInBase) {
+      setNotification({ 
+        title: 'Limite de Estoque Excedido', 
+        message: `Para produzir ${prodQty || 1} unidades, você precisa de ${newQtde * (prodQty || 1)}${item.unidade}, mas o estoque de ${item.nome} é de apenas ${estoqueAtualReal}${item.originalUnit || item.unidade}.` 
+      });
       return;
     }
-    newList[index].qtde = newQtde; 
-    newList[index].qtdeNaUnidadeBase = qtdeNaUnidadeBase;
+
+    const priceToUse = insumoReal ? insumoReal.custoUnitario : (item.custoUnitario || 0);
+    const unitInsumo = insumoReal ? insumoReal.unidade : (item.originalUnit || item.unidade);
+    
+    newList[index] = {
+      ...item,
+      qtde: newQtde,
+      valorProporcional: calculateProportionalCost(priceToUse, unitInsumo, newQtde, item.unidade)
+    };
+    
     setInsumosAdicionados(newList); 
     setNotification(null);
   };
@@ -159,7 +306,7 @@ export default function Produtos({
     setInsumoIndexToDelete(null);
   };
 
-  const handleSaveProduto = () => {
+  const handleSaveProduto = async () => {
     const dataToValidate = {
       nome: nomeProduto,
       qtd: qtdeInicial,
@@ -179,56 +326,63 @@ export default function Produtos({
     }
 
     setFormErrors({});
-    const totalCusto = insumosAdicionados.reduce((sum, i) => sum + (i.qtde * i.custoUnitario), 0);
-    const vendaSugerida = totalCusto * 2.2; // Custo + 120%
     const qtdNum = parseFloat(qtdeInicial) || 0;
     
-    if (editingProduto) {
-      setProdutosList(produtosList.map(p => p.id === editingProduto.id ? { 
-        ...p, 
-        nome: nomeProduto, 
-        custo: `R$ ${totalCusto.toFixed(2).replace('.', ',')}`, 
-        venda: `R$ ${vendaSugerida.toFixed(2).replace('.', ',')}`,
-        insumos: insumosAdicionados 
-      } : p));
-      setNotification({ title: 'Sucesso!', message: 'Produto atualizado com sucesso!', type: 'success' });
-      setTimeout(() => setNotification(null), 3000);
-      setEditingProduto(null);
-    } else {
-      const newId = Math.max(0, ...produtosList.map(p => p.id)) + 1;
-      const newProduto = { 
-        id: newId, 
-        nome: nomeProduto, 
-        receita: 'Verificar', 
-        qtd: qtdNum, 
-        custo: `R$ ${totalCusto.toFixed(2).replace('.', ',')}`, 
-        venda: `R$ ${vendaSugerida.toFixed(2).replace('.', ',')}`, 
-        dataCad: today,
-        insumos: insumosAdicionados 
-      };
+    const payload = {
+        nome: nomeProduto,
+        qtde: qtdNum,
+        custoProduto: currentCustoProducao,
+        precoVenda: parseFloat(String(precoVenda).replace(',', '.')) || 0,
+        comissaoPorcentagem: parseFloat(String(comissaoPorcentagem).replace(',', '.')) || 0,
+        insumos: insumosAdicionados
+    };
 
-      if (qtdNum > 0) {
-        const newEntrada = {
-          id: String(newId), 
-          razao: nomeProduto,
-          fornecedor: 'Produção Própria',
-          valor: totalCusto.toFixed(2).replace('.', ','),
-          desconto: '0,00',
-          total: (totalCusto * qtdNum).toFixed(2).replace('.', ','),
-          emissao: today,
-          entrada: today,
-          cadastro: today,
-          status: 'concluida',
-          qtde: qtdNum
-        };
-        setEntradasList(prev => [newEntrada, ...prev]);
+    console.log("[DEBUG] Payload final para salvamento:", payload);
+
+    try {
+      if (editingProduto) {
+        console.log("[DEBUG] Enviando Payload PUT Produto:", payload);
+        const res = await fetch(`http://localhost:3005/api/produtos/${editingProduto.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+           const errBody = await res.json().catch(()=>({}));
+           throw new Error(errBody.details || errBody.error || "Erro ao atualizar");
+        }
+        if (fetchProdutos) await fetchProdutos();
+        if (fetchInsumos) await fetchInsumos();
+        
+        setNotification({ title: 'Sucesso!', message: 'Produto atualizado com sucesso!', type: 'success' });
+        setTimeout(() => setNotification(null), 3000);
+        setEditingProduto(null);
+        setIsAddModalOpen(false);
+      } else {
+        const res = await fetch('http://localhost:3005/api/produtos', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+           const errBody = await res.json().catch(()=>({}));
+           throw new Error(errBody.details || errBody.error || "Erro ao salvar");
+        }
+        if (fetchEntradas) await fetchEntradas();
+
+        setNotification({ title: 'Sucesso!', message: 'Produto cadastrado com sucesso!', type: 'success' });
+        setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
+        if (fetchProdutos) await fetchProdutos();
+        if (fetchInsumos) await fetchInsumos();
       }
-
-      setProdutosList([newProduto, ...produtosList]);
-      setNotification({ title: 'Sucesso!', message: 'Produto cadastrado com sucesso!', type: 'success' });
-      setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
+    } catch (e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha na comunicação com o servidor', type: 'error' });
+      return; // Do not clear the form on error
     }
-    setNomeProduto(''); setQtdeInicial('0'); setInsumosAdicionados([]);
+
+    setNomeProduto(''); 
+    setQtdeInicial('0'); 
+    setInsumosAdicionados([]);
+    setPrecoVenda('0');
+    setComissaoPorcentagem('0');
+    setLucroPorcentagem('120');
   };
 
   const handleDeleteProduct = (produto) => {
@@ -236,28 +390,31 @@ export default function Produtos({
     setShowDeleteModal(true);
   };
 
-  const confirmDeleteProduct = () => {
+  const confirmDeleteProduct = async () => {
     if (!productToDelete) return;
     
-    // 1. Remover o produto da lista
-    setProdutosList(produtosList.filter(p => p.id !== productToDelete.id));
-    
-    // 2. Remover registros relacionados em Entradas
-    if (setEntradasList) {
-      setEntradasList(prev => prev.filter(e => e.razao !== productToDelete.nome));
+    try {
+      const res = await fetch(`http://localhost:3005/api/produtos/${productToDelete.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (fetchProdutos) await fetchProdutos();
+        
+        if (setEntradasList) setEntradasList(prev => prev.filter(e => e.razao !== productToDelete.nome));
+        if (setSaidasList) setSaidasList(prev => prev.filter(s => s.produto !== productToDelete.nome));
+        
+        setNotification({ title: 'Excluído!', message: 'O produto foi removido com sucesso.', type: 'info' });
+        setTimeout(() => setNotification(null), 3000);
+        setShowDeleteModal(false);
+        setProductToDelete(null);
+        setEditingProduto(null);
+        setIsAddModalOpen(false);
+      }
+    } catch(e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha ao deletar Produto', type: 'error' });
+      setTimeout(() => setNotification(null), 3500);
     }
-    
-    // 3. Remover registros relacionados em Saídas
-    if (setSaidasList) {
-      setSaidasList(prev => prev.filter(s => s.produto !== productToDelete.nome));
-    }
-    
-    setNotification({ title: 'Excluído!', message: 'O produto foi removido com sucesso.', type: 'info' });
-    setTimeout(() => setNotification(null), 3000);
-    setShowDeleteModal(false);
-    setProductToDelete(null);
-    setEditingProduto(null);
-    setIsAddModalOpen(false);
   };
 
   const handleOpenEdit = (produto) => {
@@ -265,6 +422,23 @@ export default function Produtos({
     setNomeProduto(produto.nome);
     setQtdeInicial(produto.qtd || 0);
     setInsumosAdicionados(produto.insumos || []); 
+    
+    // Tenta pegar o valor numérico, se não conseguir, limpa a string do preço
+    const rawVenda = String(produto.venda || '0');
+    const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+    const savedVendaNum = produto.vendaNum || parsedVenda;
+    const savedComissao = produto.comissaoPorcentagem || 0;
+
+    console.log(`[EDIT] Produto: ${produto.nome} | VendaNum: ${produto.vendaNum} | VendaStr: ${produto.venda} | Final: ${savedVendaNum}`);
+
+    setComissaoPorcentagem(String(savedComissao));
+    setPrecoVenda(String(savedVendaNum));
+    
+    // Calcular o lucro % atual baseado no preço e custo salvos
+    const currentCost = getDynamicCostNum(produto);
+    const profit = calculateProfitFromPrice(savedVendaNum, savedComissao, currentCost);
+    setLucroPorcentagem(profit.toFixed(2));
+
     setFormErrors({});
   };
 
@@ -294,7 +468,7 @@ export default function Produtos({
           <div className="w-[130px] text-center">Quant. Cadastrada</div>
           <div className="w-[110px] text-center">Custo Prod.</div>
           <div className="w-[100px] text-center">Preço Venda</div>
-          <div className="w-[100px] text-center">Lucro (%)</div>
+          <div className="w-[100px] text-center">Lucro (R$)</div>
           <div className="w-[80px] text-center">Ações</div>
         </div>
 
@@ -330,7 +504,7 @@ export default function Produtos({
                   {produto.id}
                 </div>
                 
-                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold">{produto.nome || '-'}</div>
+                <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate text-[#0D0D0D] font-semibold uppercase">{produto.nome || '-'}</div>
                 
                 <div className="w-[120px] flex justify-center">
                   <button 
@@ -346,24 +520,26 @@ export default function Produtos({
                 <div className="w-[110px] text-center font-medium">
                   {(() => {
                     const dynamicCost = getDynamicCostNum(produto);
-                    const savedCost = parseFloat(String(produto.custo).replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-                    const isLower = dynamicCost < (savedCost - 0.01);
                     return (
                       <div className="flex flex-col items-center">
-                        <span className={isLower ? 'text-[#36BA6F] font-bold' : ''}>R$ {dynamicCost.toFixed(2).replace('.', ',')}</span>
-                        {isLower && <span className="text-[9px] uppercase font-bold text-[#36BA6F] leading-none">Promoção!</span>}
+                        <span>R$ {dynamicCost.toFixed(2).replace('.', ',')}</span>
                       </div>
                     );
                   })()}
                 </div>
                 <div className="w-[100px] text-center text-[#36BA6F] font-semibold">{produto.venda || '-'}</div>
                 <div className="w-[100px] text-center">
-                  {(() => {
-                    const c = getDynamicCostNum(produto);
-                    const v = parseFloat(String(produto.venda).replace('R$', '').replace('.', '').replace(',', '.')) || 0;
-                    const p = v > 0 ? (((v - c) / v) * 100).toFixed(1) : 0;
-                    return <span className={`font-bold ${p > 30 ? 'text-[#36BA6F]' : p > 15 ? 'text-blue-500' : 'text-amber-500'}`}>{p}%</span>;
-                  })()}
+                    {(() => {
+                      const cp = getDynamicCostNum(produto);
+                      const rawVenda = String(produto.venda || '0');
+                      const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+                      const pv = produto.vendaNum || parsedVenda;
+                      const comPct = produto.comissaoPorcentagem || 0;
+                      
+                      const comVal = (pv - cp) * (comPct / 100);
+                      const profitValue = pv - cp - comVal;
+                      return <span className={`font-bold ${profitValue >= 0 ? 'text-[#36BA6F]' : 'text-red-500'}`}>R$ {profitValue.toFixed(2).replace('.', ',')}</span>;
+                    })()}
                 </div>
                 <div className="w-[80px] flex justify-center">
                     <button 
@@ -425,7 +601,7 @@ export default function Produtos({
               <h3 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">Tem certeza?</h3>
               <p className="font-inter text-sm text-[#606060] mt-1">
                 {productToDelete 
-                  ? `Esta ação removerá permanentemente o produto "${productToDelete.nome}" e todo o seu histórico de entradas e saídas.`
+                  ? `Esta ação removerá permanentemente o produto "${(productToDelete.nome || '').toUpperCase()}" e todo o seu histórico de entradas e saídas.`
                   : "Deseja realmente remover este insumo da receita deste produto?"}
               </p>
             </div>
@@ -464,7 +640,7 @@ export default function Produtos({
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                </div>
                <div className="flex flex-col gap-1">
-                 <h4 className="font-plus-jakarta text-sm font-semibold text-[#0D0D0D]">{selectedProduto.nome}</h4>
+                 <h4 className="font-plus-jakarta text-sm font-semibold text-[#0D0D0D] uppercase">{selectedProduto.nome}</h4>
                  <span className="font-plus-jakarta text-xs font-medium text-[#F84910]">Cód. {selectedProduto.id}</span>
                </div>
             </div>
@@ -485,10 +661,10 @@ export default function Produtos({
                   selectedProduto.insumos.map((ins, idx) => (
                     <div key={idx} className="flex h-[35px] w-full items-center justify-between px-4 font-inter text-xs font-medium text-[#606060] border-b border-[#F0F0F3] last:border-0 hover:bg-slate-50 transition">
                       <div className="w-[40px] text-center text-[#0D0D0D]">{ins.id}</div>
-                      <div className="w-[100px] text-left text-[#0D0D0D] truncate" title={ins.nome}>{ins.nome}</div>
-                      <div className="w-[100px] text-center">{ins.qtde} {ins.unidade}</div>
-                      <div className="w-[140px] text-center">R$ {ins.originalPrice ? parseFloat(ins.originalPrice).toFixed(2) : (ins.originalUnit ? '?' : '')}/{ins.originalUnit}</div>
-                      <div className="w-[100px] text-center">R$ {(ins.qtde * ins.custoUnitario).toFixed(2)}</div>
+                      <div className="w-[100px] text-left text-[#0D0D0D] truncate uppercase" title={ins.nome}>{ins.nome}</div>
+                      <div className="w-[100px] text-center">{Number(ins.qtde).toFixed(2).replace(/\.?0+$/, '')} {ins.unidade}</div>
+                      <div className="w-[140px] text-center">R$ {(ins.custoUnitario || 0).toFixed(2).replace('.', ',')}</div>
+                      <div className="w-[100px] text-center font-bold text-[#36BA6F]">R$ {(ins.valorProporcional || calculateProportionalCost(ins.custoUnitario, ins.originalUnit || ins.unidade, ins.qtde, ins.unidade)).toFixed(2).replace('.', ',')}</div>
                     </div>
                   ))
                 ) : (
@@ -500,7 +676,14 @@ export default function Produtos({
             <div className="mt-2 flex w-full items-center justify-end px-4">
               <div className="flex h-[40px] items-center rounded-lg bg-[rgba(54,186,111,0.1)] px-4">
                 <span className="font-plus-jakarta text-sm font-semibold text-[#0D0D0D]">
-                  Custo de Produção Total: <span className="text-[#36BA6F]">R$ {(selectedProduto.insumos || []).reduce((acc, ins) => acc + (ins.qtde * (ins.custoUnitario || 0)), 0).toFixed(2)}</span>
+                  Custo de Produção Total: <span className="text-[#36BA6F]">R$ {
+                    (selectedProduto.insumos || []).reduce((acc, ins) => {
+                      const currentInsumo = insumosList.find(i => i.id.toString() === ins.id.toString());
+                      const priceToUse = currentInsumo ? currentInsumo.custoUnitario : (ins.custoUnitario || 0);
+                      const unitInsumo = currentInsumo ? currentInsumo.unidade : (ins.originalUnit || ins.unidade);
+                      return acc + calculateProportionalCost(priceToUse, unitInsumo, ins.qtde, ins.unidade);
+                    }, 0).toFixed(2).replace('.', ',')
+                  }</span>
                 </span>
               </div>
             </div>
@@ -519,46 +702,7 @@ export default function Produtos({
             onMouseDown={e => e.stopPropagation()}
           >
             
-            {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${
-                notification.type === 'success' ? 'border-green-100 bg-green-50' : 
-                notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' : 
-                notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 
-                'border-red-100 bg-red-50'
-              }`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${
-                  notification.type === 'success' ? 'bg-green-500' : 
-                  notification.type === 'warning' ? 'bg-yellow-500' : 
-                  notification.type === 'info' ? 'bg-blue-500' : 
-                  'bg-red-500'
-                }`}>
-                   {notification.type === 'success' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                   ) : notification.type === 'warning' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   ) : notification.type === 'info' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                   ) : (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   )}
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${
-                    notification.type === 'success' ? 'text-green-800' : 
-                    notification.type === 'warning' ? 'text-yellow-800' : 
-                    notification.type === 'info' ? 'text-blue-800' : 
-                    'text-red-800'
-                  }`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${
-                    notification.type === 'success' ? 'text-green-600' : 
-                    notification.type === 'warning' ? 'text-yellow-600' : 
-                    notification.type === 'info' ? 'text-blue-600' : 
-                    'text-red-600'
-                  }`}>{notification.message}</p>
-                </div>
-                <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-              </div>
-            )}
+
 
             <div className="flex h-[50px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
               <div className="flex items-center gap-2">
@@ -590,6 +734,7 @@ export default function Produtos({
                 <div className="relative">
                   <input 
                     type="number" 
+                    min="0"
                     placeholder="0" 
                     value={qtdeInicial} 
                     onChange={(e) => setQtdeInicial(e.target.value)} 
@@ -622,10 +767,10 @@ export default function Produtos({
                   {insumosAdicionados.map((ins, idx) => (
                     <div key={idx} className="flex h-[45px] w-full items-center justify-between px-4 font-inter text-xs text-[#606060] border-b border-[#F0F0F3] last:border-0 hover:bg-slate-50">
                       <div className="w-[40px] text-center font-bold">{ins.id}</div>
-                      <div className="flex-1 px-4 text-left font-bold truncate text-[#0D0D0D]">{ins.nome}</div>
-                      <div className="w-[80px] text-center text-[#F84910] font-bold">{ins.qtde}</div>
+                      <div className="flex-1 px-4 text-left font-bold truncate text-[#0D0D0D] uppercase">{ins.nome}</div>
+                      <div className="w-[80px] text-center text-[#F84910] font-bold">{Number(ins.qtde).toFixed(2).replace(/\.?0+$/, '')}</div>
                       <div className="w-[80px] text-center font-bold text-[#606060]">{ins.unidade}</div>
-                      <div className="w-[100px] text-center font-bold text-[#36BA6F]">R$ {(ins.qtde * (ins.custoUnitario || 0)).toFixed(2)}</div>
+                      <div className="w-[100px] text-center font-bold text-[#36BA6F]">R$ {(ins.valorProporcional || 0).toFixed(2).replace('.', ',')}</div>
                       <div className="w-[80px] flex items-center justify-center gap-2">
                          <button onClick={() => updateInsumoQtde(idx, -1)} className="size-6 bg-gray-100 rounded flex items-center justify-center hover:bg-gray-200"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                          <button onClick={() => updateInsumoQtde(idx, 1)} className="size-6 bg-gray-100 rounded flex items-center justify-center hover:bg-gray-200"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
@@ -656,7 +801,7 @@ export default function Produtos({
                        
                         .map(i => (
                           <option key={i.id} value={i.id}>
-                            {i.nome} - R$ {(i.custoUnitario || 0).toFixed(2).replace('.', ',')} (Estoque: {Number(i.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {i.unidade})
+                            {(i.nome.charAt(0).toUpperCase() + i.nome.slice(1))} - R$ {(i.custoUnitario || 0).toFixed(2).replace('.', ',')} (Estoque: {Number(i.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} {i.unidade})
                           </option>
                         ))}
                    </select>
@@ -703,33 +848,73 @@ export default function Produtos({
               </div>
             </div>
 
-            <div className="mt-8 border-t border-[#F0F0F3] pt-6 flex flex-col gap-6">
-              {/* Financial Dashboard Row */}
-              <div className="flex flex-wrap items-center justify-start gap-4 bg-[rgba(248,73,16,0.03)] p-5 rounded-xl border border-[rgba(248,73,16,0.08)]">
-                <div className="bg-white px-5 h-10 flex items-center rounded-lg border border-[#F0F0F3]">
-                  <span className="font-plus-jakarta text-sm font-bold text-[#606060]">Custo Total: <span className="text-[#36BA6F] ml-1">R$ {insumosAdicionados.reduce((sum, i) => sum + (i.qtde * (i.custoUnitario || 0)), 0).toFixed(2).replace('.', ',')}</span></span>
-                </div>
-                {insumosAdicionados.length > 0 && (
-                  <div className="bg-white px-5 h-10 flex items-center rounded-lg border border-[#F0F0F3]">
-                    <span className="font-plus-jakarta text-sm font-bold text-[#606060]">
-                      Lucro Estimado: <span className="text-[#F84910] ml-1">
-                        R$ {(() => {
-                          const c = insumosAdicionados.reduce((sum, item) => {
-                            const currentInsumo = insumosList.find(i => i.id.toString() === item.id.toString());
-                            const priceToUse = currentInsumo ? currentInsumo.custoUnitario : (item.custoUnitario || 0);
-                            return sum + (item.qtde * priceToUse);
-                          }, 0);
-                          const v = c * 2.2;
-                          return (v - c).toFixed(2).replace('.', ',');
-                        })()}
-                      </span>
-                      <span className="text-[10px] text-[#A0A0A0] ml-2 font-medium bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">Markup 2.2x</span>
-                    </span>
+            <div className="mt-6 border-t border-[#F0F0F3] pt-5 flex flex-col gap-5">
+              <h4 className="font-plus-jakarta text-base font-bold text-[#0D0D0D]">Precificação Inteligente</h4>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[rgba(248,73,16,0.03)] p-5 rounded-xl border border-[rgba(248,73,16,0.08)]">
+                {/* Custo de Produção (Leitura) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#606060] uppercase">Custo de Produção</label>
+                  <div className="h-11 flex items-center px-4 bg-white border border-[#F0F0F3] rounded-lg font-inter font-bold text-[#0D0D0D]">
+                    R$ {currentCustoProducao.toFixed(2).replace('.', ',')}
                   </div>
-                )}
+                </div>
+
+                {/* Comissão (%) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#606060] uppercase">Comissão (%)</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={comissaoPorcentagem} 
+                      onChange={(e) => setComissaoPorcentagem(e.target.value)}
+                      className="h-11 w-full bg-white border border-[#F0F0F3] rounded-lg px-4 font-inter font-bold text-[#0D0D0D] outline-none focus:border-[#F84910] text-center"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#606060]">%</span>
+                  </div>
+                  <span className="text-[10px] text-[#606060] mt-0.5 ml-1">
+                    Valor: R$ {((parseFloat(precoVenda) - currentCustoProducao) * (parseFloat(comissaoPorcentagem) / 100)).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+
+                {/* Lucro Líquido (%) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#606060] uppercase">Lucro Desejado (%)</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={lucroPorcentagem} 
+                      onChange={(e) => handleProfitPctChange(e.target.value)}
+                      className="h-11 w-full bg-white border border-[#F0F0F3] rounded-lg px-4 font-inter font-bold text-[#36BA6F] outline-none focus:border-[#36BA6F] text-center"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#36BA6F]">%</span>
+                  </div>
+                </div>
+
+                {/* Preço de Venda (Editável e Calculado) */}
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <label className="text-[11px] font-bold text-[#606060] uppercase">Preço de Venda Final</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-[#F84910]">R$</span>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={precoVenda} 
+                      onChange={(e) => handlePriceChange(e.target.value)}
+                      className="h-12 w-full bg-white border-2 border-[#F84910] rounded-lg pl-10 pr-4 font-inter text-lg font-black text-[#F84910] outline-none shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Lucro em R$ (Visualização) */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] font-bold text-[#606060] uppercase">Lucro Líquido (R$)</label>
+                  <div className="h-12 flex items-center justify-center bg-[#36BA6F] rounded-lg font-inter text-lg font-black text-white shadow-md">
+                    R$ {(parseFloat(precoVenda) - currentCustoProducao - ((parseFloat(precoVenda) - currentCustoProducao) * (parseFloat(comissaoPorcentagem) / 100))).toFixed(2).replace('.', ',')}
+                  </div>
+                </div>
               </div>
 
-              {/* Actions Row */}
               <div className="flex items-center justify-end gap-3 pb-2">
                 {editingProduto && (
                   <button 
@@ -745,8 +930,8 @@ export default function Produtos({
                   onClick={handleSaveProduto} 
                   className={`h-11 px-10 rounded-lg font-plus-jakarta font-bold text-sm flex items-center gap-2 transition-all shadow-md ${isFormValid ? 'bg-[#36BA6F] text-white hover:scale-105 active:scale-95 cursor-pointer' : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'}`}
                 >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                   {editingProduto ? 'Salvar Alterações' : 'Salvar Produto'}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 </button>
               </div>
             </div>

@@ -1,0 +1,146 @@
+[2026-04-26T00:19:48.529Z] ERROR: 
+Invalid `prisma.insumo.update()` invocation in
+C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:48
+
+  378 const unitPrice = pEmbalagem / tEmbalagem;
+  379 
+  380 try {
+→ 381     const atualizado = await prisma.insumo.update({
+            where: {
+              Cod_Insumo: 12
+            },
+            data: {
+              Nome_Insumo: "Teste",
+              unidade: "ml",
+              Custo_insumo: 0.1,
+              Preco_Embalagem: 10,
+              ~~~~~~~~~~~~~~~
+              Tamanho_Embalagem: 100,
+              Estoque: 10,
+              Cod_Fornecedor: 1,
+          ?   fornecedor?: FornecedoresUpdateOneWithoutInsumosNestedInput,
+          ?   custos?: CustoProdutoUpdateManyWithoutInsumoNestedInput,
+          ?   entradas?: EntradaInsumosUpdateManyWithoutInsumoNestedInput,
+          ?   saidas?: SaidaInsumosUpdateManyWithoutInsumoNestedInput
+            },
+            include: {
+              fornecedor: true
+            }
+          })
+
+Unknown argument `Preco_Embalagem`. Available options are marked with ?.
+Method: PUT
+URL: /api/insumos/12
+Body: {"nome":"Teste","unidade":"ml","custoUnitario":10,"precoEmbalagem":10,"tamanhoEmbalagem":100,"estoqueAtual":10,"fornecedorId":"1"}
+Stack: PrismaClientValidationError: 
+Invalid `prisma.insumo.update()` invocation in
+C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:48
+
+  378 const unitPrice = pEmbalagem / tEmbalagem;
+  379 
+  380 try {
+→ 381     const atualizado = await prisma.insumo.update({
+            where: {
+              Cod_Insumo: 12
+            },
+            data: {
+              Nome_Insumo: "Teste",
+              unidade: "ml",
+              Custo_insumo: 0.1,
+              Preco_Embalagem: 10,
+              ~~~~~~~~~~~~~~~
+              Tamanho_Embalagem: 100,
+              Estoque: 10,
+              Cod_Fornecedor: 1,
+          ?   fornecedor?: FornecedoresUpdateOneWithoutInsumosNestedInput,
+          ?   custos?: CustoProdutoUpdateManyWithoutInsumoNestedInput,
+          ?   entradas?: EntradaInsumosUpdateManyWithoutInsumoNestedInput,
+          ?   saidas?: SaidaInsumosUpdateManyWithoutInsumoNestedInput
+            },
+            include: {
+              fornecedor: true
+            }
+          })
+
+Unknown argument `Preco_Embalagem`. Available options are marked with ?.
+    at ar (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:10:1374)
+    at zr.handleRequestError (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7929)
+    at zr.handleAndLogRequestError (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7581)
+    at zr.request (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7288)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async a (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:75:6862)
+    at async C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:28
+-----------------------------------
+[2026-04-26T00:20:15.161Z] ERROR: 
+Invalid `prisma.insumo.update()` invocation in
+C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:48
+
+  378 const unitPrice = pEmbalagem / tEmbalagem;
+  379 
+  380 try {
+→ 381     const atualizado = await prisma.insumo.update({
+            where: {
+              Cod_Insumo: 12
+            },
+            data: {
+              Nome_Insumo: "Teste",
+              unidade: "ml",
+              Custo_insumo: 0.1,
+              Preco_Embalagem: 10,
+              ~~~~~~~~~~~~~~~
+              Tamanho_Embalagem: 100,
+              Estoque: 10,
+              Cod_Fornecedor: 1,
+          ?   fornecedor?: FornecedoresUpdateOneWithoutInsumosNestedInput,
+          ?   custos?: CustoProdutoUpdateManyWithoutInsumoNestedInput,
+          ?   entradas?: EntradaInsumosUpdateManyWithoutInsumoNestedInput,
+          ?   saidas?: SaidaInsumosUpdateManyWithoutInsumoNestedInput
+            },
+            include: {
+              fornecedor: true
+            }
+          })
+
+Unknown argument `Preco_Embalagem`. Available options are marked with ?.
+Method: PUT
+URL: /api/insumos/12
+Body: {"nome":"Teste","unidade":"ml","custoUnitario":10,"precoEmbalagem":10,"tamanhoEmbalagem":100,"estoqueAtual":10,"fornecedorId":"1"}
+Stack: PrismaClientValidationError: 
+Invalid `prisma.insumo.update()` invocation in
+C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:48
+
+  378 const unitPrice = pEmbalagem / tEmbalagem;
+  379 
+  380 try {
+→ 381     const atualizado = await prisma.insumo.update({
+            where: {
+              Cod_Insumo: 12
+            },
+            data: {
+              Nome_Insumo: "Teste",
+              unidade: "ml",
+              Custo_insumo: 0.1,
+              Preco_Embalagem: 10,
+              ~~~~~~~~~~~~~~~
+              Tamanho_Embalagem: 100,
+              Estoque: 10,
+              Cod_Fornecedor: 1,
+          ?   fornecedor?: FornecedoresUpdateOneWithoutInsumosNestedInput,
+          ?   custos?: CustoProdutoUpdateManyWithoutInsumoNestedInput,
+          ?   entradas?: EntradaInsumosUpdateManyWithoutInsumoNestedInput,
+          ?   saidas?: SaidaInsumosUpdateManyWithoutInsumoNestedInput
+            },
+            include: {
+              fornecedor: true
+            }
+          })
+
+Unknown argument `Preco_Embalagem`. Available options are marked with ?.
+    at ar (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:10:1374)
+    at zr.handleRequestError (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7929)
+    at zr.handleAndLogRequestError (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7581)
+    at zr.request (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:65:7288)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async a (C:\Users\shaya\Downloads\App\App_St\node_modules\@prisma\client\runtime\client.js:75:6862)
+    at async C:\Users\shaya\Downloads\App\App_St\server\index.cjs:381:28
+-----------------------------------

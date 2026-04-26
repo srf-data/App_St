@@ -69,7 +69,7 @@ const iconMap = {
   )
 };
 
-export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUsersList }) {
+export default function Users({ onLogout, currentUser }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeMenu, setActiveMenu] = useState('Página Inicial');
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -91,7 +91,24 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
   const [editingUser, setEditingUser] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Global Escape Listener to close all standard application Modals
+  const [produtosList, setProdutosList] = useState([]);
+  const [insumosList, setInsumosList] = useState([]);
+  const [usuariosList, setUsuariosList] = useState([]);
+  const [entradasList, setEntradasList] = useState([]);
+  const [saidasList, setSaidasList] = useState([]);
+  const [saidaInsumosList, setSaidaInsumosList] = useState([]);
+  const [fornecedoresList, setFornecedoresList] = useState([]);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -109,22 +126,42 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  // Sincroniza a foto do currentUser se ele for o Studio Solart ou o admin inicial
-  const loggedUser = fakeUsersList.find(u => u.nome === (currentUser?.nome || 'Studio Solart')) || fakeUsersList[0];
+  let loggedUser = (usuariosList && usuariosList.length > 0) 
+    ? (usuariosList.find(u => u.id === currentUser?.id || u.nome === currentUser?.nome) || currentUser)
+    : currentUser;
+
+  if (loggedUser && loggedUser.nome === 'Studio Solart' && !loggedUser.foto) {
+    loggedUser = { ...loggedUser, foto: studioSolartLogo };
+  }
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Por favor, selecione apenas arquivos de imagem.');
+        setNotification({ title: 'Erro de Arquivo', message: 'Por favor, selecione apenas arquivos de imagem.', type: 'error' });
         return;
       }
-      setNewImage(file);
-      setImagePreview(URL.createObjectURL(file));
+      
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_SIZE) {
+        setNotification({ 
+          title: 'Arquivo Muito Grande', 
+          message: 'A imagem deve ter no máximo 10MB. Por favor, escolha uma imagem menor.', 
+          type: 'error' 
+        });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewImage(file);
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     const dataToValidate = {
       nome: newNome,
       email: newEmail,
@@ -147,31 +184,43 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
     }
 
     setFormErrors({});
-    const today = new Date();
-    const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
-    if (editingUser) {
-      setFakeUsersList(prev => prev.map(u => u.id === editingUser.id ? { ...u, nome: newNome, email: newEmail, senha: newSenha, foto: imagePreview || u.foto } : u));
-      setNotification({ title: 'Sucesso!', message: 'Usuário atualizado com sucesso!', type: 'success' });
-      setTimeout(() => setNotification(null), 3000);
-      setEditingUser(null);
-    } else {
-      const highestId = Math.max(0, ...fakeUsersList.map(u => u.id));
-      setFakeUsersList([
-        {
-          id: highestId + 1,
-          nome: newNome,
-          email: newEmail,
-          senha: newSenha,
-          dataCad: formattedDate,
-          ultimoAcc: `${formattedDate} - 00:00`,
-          foto: imagePreview || null
-        },
-        ...fakeUsersList
-      ]);
-      setNotification({ title: 'Sucesso!', message: 'Usuário cadastrado com sucesso!', type: 'success' });
+    const payload = {
+      nome: newNome,
+      email: newEmail,
+      senha: newSenha,
+      foto: imagePreview
+    };
+
+    try {
+      const url = editingUser 
+        ? `http://localhost:3005/api/usuarios/${editingUser.id}` 
+        : 'http://localhost:3005/api/usuarios';
+      const method = editingUser ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Erro ao salvar usuário.');
+      }
+
+      await fetchUsuarios();
+      setNotification({ 
+        title: 'Sucesso!', 
+        message: editingUser ? 'Usuário atualizado com sucesso!' : 'Usuário cadastrado com sucesso!', 
+        type: 'success' 
+      });
       setTimeout(() => { setNotification(null); setIsAddingUser(false); }, 1500);
-      setCurrentPage(1);
+      setEditingUser(null);
+      if (!editingUser) setCurrentPage(1);
+    } catch (error) {
+      console.error(error);
+      setNotification({ title: 'Erro ao Salvar', message: error.message, type: 'error' });
     }
 
     setIsAddingUser(false);
@@ -180,19 +229,38 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
 
   const handleDeleteUser = (user) => {
     setEditingUser(user);
-    setNewNome(user.nome); // Para o texto do confirm
+    setNewNome(user.nome); 
     setShowDeleteConfirm(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (editingUser) {
-      setFakeUsersList(prev => prev.filter(u => u.id !== editingUser.id));
-      setNotification({ title: 'Excluído!', message: 'O usuário foi removido com sucesso.', type: 'info' });
-      setTimeout(() => setNotification(null), 3000);
-      setShowDeleteConfirm(false);
-      setIsAddingUser(false);
-      setEditingUser(null);
-      setNewNome(''); setNewEmail(''); setNewSenha(''); setNewImage(null); setImagePreview(null);
+      try {
+        const res = await fetch(`http://localhost:3005/api/usuarios/${editingUser.id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Erro ao remover usuário.');
+
+        const isSelfDeletion = editingUser.id === currentUser?.id;
+
+        await fetchUsuarios();
+        setNotification({ title: 'Excluído!', message: 'O usuário foi removido com sucesso.', type: 'info' });
+        
+        if (isSelfDeletion) {
+          setNotification({ title: 'Sessão Encerrada', message: 'Sua conta foi excluída. Saindo...', type: 'warning' });
+          setTimeout(() => {
+            onLogout();
+          }, 1500);
+          return;
+        }
+
+        setTimeout(() => setNotification(null), 3000);
+        setShowDeleteConfirm(false);
+        setIsAddingUser(false);
+        setEditingUser(null);
+        setNewNome(''); setNewEmail(''); setNewSenha(''); setNewImage(null); setImagePreview(null);
+      } catch (error) {
+        console.error(error);
+        setNotification({ title: 'Erro ao Excluir', message: error.message, type: 'error' });
+      }
     }
   };
 
@@ -208,15 +276,102 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
     setFormErrors({});
   };
 
-  // Domain data states
-  const [produtosList, setProdutosList] = useState(initialProdutos);
-  const [insumosList, setInsumosList] = useState(initialInsumos);
-  const [entradasList, setEntradasList] = useState(initialEntradas);
-  const [saidasList, setSaidasList] = useState(initialSaidas);
-  const [saidaInsumosList, setSaidaInsumosList] = useState([]);
-  const [fornecedoresList, setFornecedoresList] = useState(initialFornecedores);
 
-  // Dashboard Navigation Filters
+  const fetchFornecedores = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/fornecedores');
+      if (res.ok) {
+        const data = await res.json();
+        setFornecedoresList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch fornecedores', e);
+    }
+  };
+
+  const fetchInsumos = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/insumos');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[DEBUG] Insumos recebidos do servidor:', data.map(i => ({ id: i.id, nome: i.nome, temFoto: !!i.foto, lenFoto: i.foto?.length || 0 })));
+        setInsumosList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch insumos', e);
+    }
+  };
+
+  const fetchProdutos = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/produtos');
+      if (res.ok) {
+        const data = await res.json();
+        setProdutosList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch produtos', e);
+    }
+  };
+
+  const fetchEntradas = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/entradas');
+      if (res.ok) {
+        const data = await res.json();
+        setEntradasList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch entradas', e);
+    }
+  };
+
+  const fetchSaidas = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/saidas/produtos');
+      if (res.ok) {
+        const data = await res.json();
+        setSaidasList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch saidas produtos', e);
+    }
+  };
+
+  const fetchSaidaInsumos = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/saidas/insumos');
+      if (res.ok) {
+        const data = await res.json();
+        setSaidaInsumosList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch saidas insumos', e);
+    }
+  };
+
+  const fetchUsuarios = async () => {
+    try {
+      const res = await fetch('http://localhost:3005/api/usuarios');
+      if (res.ok) {
+        const data = await res.json();
+        setUsuariosList(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch usuarios', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchFornecedores();
+    fetchInsumos();
+    fetchProdutos();
+    fetchEntradas();
+    fetchSaidas();
+    fetchSaidaInsumos();
+    fetchUsuarios();
+  }, []);
+
   const [dashboardFilter, setDashboardFilter] = useState(null);
 
   const isFormValid = newNome.trim() !== '' && newEmail.trim() !== '' && newSenha.trim() !== '';
@@ -227,7 +382,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
 
   const ITEMS_PER_PAGE = 20;
 
-  const filteredUsers = fakeUsersList.filter(u => u.nome.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredUsers = usuariosList.filter(u => (u.nome || '').toLowerCase().includes(searchQuery.toLowerCase()) || (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()));
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -246,7 +401,6 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
     { type: 'section', title: 'ADMINISTRAÇÃO' },
     { title: 'Usuários' },
   ];
-
   return (
     <div className="flex min-h-screen bg-[#FDFDFE] md:bg-white overflow-hidden">
       {/* Transparent Spacer to keep layout flow */}
@@ -313,20 +467,16 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-white">
-        {/* Header */}
         <header className="flex min-h-[84px] w-full flex-col justify-center gap-4 border-b border-[#F0F0F3] px-8 py-4 min-[860px]:flex-row min-[860px]:items-center min-[860px]:justify-between min-[860px]:gap-0">
-          {/* Avatar and Logout */}
           <div className="flex w-full items-center justify-end gap-4 order-1 min-[860px]:order-2 min-[860px]:w-auto">
-            <span className="hidden min-[860px]:block font-inter text-base font-semibold text-[#0D0D0D]">Olá, {loggedUser.nome}</span>
-            <img src={loggedUser.foto || avatarDefault} alt="Perfil" className="size-[34px] rounded-full object-cover shrink-0 transition-fluid hover:scale-110 border border-[#F0F0F3]" />
+            <span className="hidden min-[860px]:block font-inter text-base font-semibold text-[#0D0D0D]">Olá, {loggedUser?.nome || (currentUser?.nome || 'Usuário')}</span>
+            <img src={loggedUser?.foto || avatarDefault} alt="Perfil" className="size-[34px] rounded-full object-cover shrink-0 transition-fluid hover:scale-110 border border-[#F0F0F3]" />
             <button onClick={onLogout} style={{ WebkitTapHighlightColor: 'transparent', outline: 'none' }} className="flex h-[34px] w-[90px] cursor-pointer items-center justify-center rounded-lg bg-gradient-to-br from-[#F84910] to-[#FF6838] transition-fluid hover-scale shadow-sm">
               <span className="font-plus-jakarta text-sm font-semibold text-white">Sair</span>
             </button>
           </div>
 
-          {/* Title */}
           <div className="flex items-center gap-3 order-2 min-[860px]:order-1">
             <div className="flex size-[56px] items-center justify-center shrink-0 rounded-2xl bg-white shadow-sm border border-[#F0F0F3] text-[#BEBEBE] [&>svg]:size-5">
               {iconMap[activeMenu] || iconMap['Página Inicial']}
@@ -340,7 +490,6 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
           </div>
         </header>
 
-        {/* Content Area */}
         <div className="flex w-full flex-col p-8 pt-10 transition-fluid anim-fade-in relative">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-col gap-2 transition-all">
@@ -448,8 +597,8 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                   <div className="flex-1 w-[auto] max-w-none text-left px-4">Nome</div>
                   <div className="flex-1 w-[auto] max-w-none text-left px-4">E-mail</div>
                   <div className="w-[140px] text-center">Senha</div>
-                  <div className="w-[150px] text-center">Data de Cadastro</div>
-                  <div className="w-[150px] text-center">Último Acesso</div>
+                  <div className="w-[180px] text-center">Data de Cadastro</div>
+                  <div className="w-[180px] text-center">Último Acesso</div>
                   <div className="w-[60px] text-center">Ações</div>
                 </div>
 
@@ -470,42 +619,7 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                       </h3>
                     </div>
 
-                    {notification && (
-                      <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' :
-                          notification.type === 'warning' ? 'border-yellow-100 bg-yellow-50' :
-                            notification.type === 'info' ? 'border-blue-100 bg-blue-50' :
-                              'border-red-100 bg-red-50'
-                        }`}>
-                        <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' :
-                            notification.type === 'warning' ? 'bg-yellow-500' :
-                              notification.type === 'info' ? 'bg-blue-500' :
-                                'bg-red-500'
-                          }`}>
-                          {notification.type === 'success' ? (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                          ) : notification.type === 'warning' ? (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                          ) : notification.type === 'info' ? (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                          ) : (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-1">
-                          <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' :
-                              notification.type === 'warning' ? 'text-yellow-800' :
-                                notification.type === 'info' ? 'text-blue-800' :
-                                  'text-red-800'
-                            }`}>{notification.title}</h4>
-                          <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' :
-                              notification.type === 'warning' ? 'text-yellow-600' :
-                                notification.type === 'info' ? 'text-blue-600' :
-                                  'text-red-600'
-                            }`}>{notification.message}</p>
-                        </div>
-                        <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                      </div>
-                    )}
+
                     <div className="flex flex-col gap-6">
                       {/* Primeira Linha: Nome, E-mail, Senha */}
                       <div className="flex w-full items-start justify-between px-2 gap-4">
@@ -610,13 +724,13 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
                     <div key={user.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-colors hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0">
                       <div className="w-[80px] text-center text-[#0D0D0D]">{user.id || '-'}</div>
                       <div className="w-[75px] flex justify-center">
-                        <img src={user.foto || avatarDefault} alt="Avatar" className="h-[34px] w-[34px] object-cover rounded-full border border-[#F0F0F3]" />
+                        <img src={user.foto || (user.nome === 'Studio Solart' ? studioSolartLogo : avatarDefault)} alt="Avatar" className="h-[34px] w-[34px] object-cover rounded-full border border-[#F0F0F3]" />
                       </div>
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 text-[#0D0D0D] truncate">{user.name || user.nome || '-'}</div>
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{user.email || '-'}</div>
                       <div className="w-[140px] text-center">{user.senha || '-'}</div>
-                      <div className="w-[150px] text-center">{user.dataCad || '-'}</div>
-                      <div className="w-[150px] text-center">{user.ultimoAcc || '-'}</div>
+                      <div className="w-[180px] text-center">{user.dataCad || '-'}</div>
+                      <div className="w-[180px] text-center">{user.ultimoAcc || '-'}</div>
                       <div className="w-[60px] flex justify-center">
                         <button
                           onClick={() => handleOpenEditUser(user)}
@@ -666,9 +780,13 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
             </div>
           ) : activeMenu === 'Produtos' ? (
             <Produtos
+              fetchProdutos={fetchProdutos}
+              fetchInsumos={fetchInsumos}
+              fetchEntradas={fetchEntradas}
               produtosList={produtosList}
               setProdutosList={setProdutosList}
               insumosList={insumosList}
+              setInsumosList={setInsumosList}
               fornecedoresList={fornecedoresList}
               entradasList={entradasList}
               setEntradasList={setEntradasList}
@@ -679,7 +797,9 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               searchQuery={searchQuery}
               dashboardFilter={dashboardFilter}
               clearFilter={() => setDashboardFilter(null)}
+              setNotification={setNotification}
             />
+
           ) : activeMenu === 'Entradas' ? (
             <Entradas
               entradasList={entradasList}
@@ -689,12 +809,20 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               insumosList={insumosList}
               setInsumosList={setInsumosList}
               fornecedoresList={fornecedoresList}
+              fetchEntradas={fetchEntradas}
+              fetchInsumos={fetchInsumos}
+              fetchProdutos={fetchProdutos}
               isAddModalOpen={isAddingEntrada}
               setIsAddModalOpen={setIsAddingEntrada}
               searchQuery={searchQuery}
+              setNotification={setNotification}
             />
+
           ) : activeMenu === 'Matérias-primas' ? (
             <MateriasPrimas
+              fetchInsumos={fetchInsumos}
+              fetchEntradas={fetchEntradas}
+              fetchProdutos={fetchProdutos}
               insumosList={insumosList}
               setInsumosList={setInsumosList}
               fornecedoresList={fornecedoresList}
@@ -709,9 +837,12 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               searchQuery={searchQuery}
               dashboardFilter={dashboardFilter}
               clearFilter={() => setDashboardFilter(null)}
+              setNotification={setNotification}
             />
+
           ) : activeMenu === 'Fornecedores' ? (
             <Fornecedores
+              fetchFornecedores={fetchFornecedores}
               isAddModalOpen={isAddingFornecedor}
               setIsAddModalOpen={setIsAddingFornecedor}
               searchQuery={searchQuery}
@@ -721,7 +852,9 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               setInsumosList={setInsumosList}
               produtosList={produtosList}
               setProdutosList={setProdutosList}
+              setNotification={setNotification}
             />
+
           ) : activeMenu === 'Saídas' ? (
             <Saidas
               saidasList={saidasList}
@@ -732,10 +865,16 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
               setProdutosList={setProdutosList}
               insumosList={insumosList}
               setInsumosList={setInsumosList}
+              fetchSaidas={fetchSaidas}
+              fetchSaidaInsumos={fetchSaidaInsumos}
+              fetchProdutos={fetchProdutos}
+              fetchInsumos={fetchInsumos}
               isAddModalOpen={isAddingSaida}
               setIsAddModalOpen={setIsAddingSaida}
               searchQuery={searchQuery}
+              setNotification={setNotification}
             />
+
           ) : (
             <div className="flex w-full flex-col items-center justify-center py-20 text-[#606060] bg-white border border-[#F0F0F3] rounded-lg">
               <p className="animate-pulse text-lg text-center">Painel dinâmico da seção {activeMenu} entrará aqui.</p>
@@ -743,7 +882,33 @@ export default function Users({ onLogout, currentUser, fakeUsersList, setFakeUse
             </div>
           )}
         </div>
+        {notification && (
+          <div className={`fixed bottom-8 left-8 z-[500] flex w-full max-w-[440px] items-start gap-4 rounded-xl border bg-white p-6 shadow-[0_12px_45px_rgba(0,0,0,0.1)] animate-in slide-in-from-left-10 duration-500 overflow-hidden ${notification.type === 'success' ? 'border-green-100' : notification.type === 'error' ? 'border-red-100' : 'border-blue-100'}`}>
+            <div className={`absolute top-0 left-0 h-full w-1.5 ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+            <div className={`flex size-6 shrink-0 items-center justify-center rounded-full mt-0.5 ${notification.type === 'success' ? 'bg-green-100 text-green-600' : notification.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+              {notification.type === 'success' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              ) : notification.type === 'error' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col gap-1 pr-4 text-left">
+              <h4 className="font-plus-jakarta text-sm font-bold text-[#0D0D0D]">{notification.title}</h4>
+              <p className="font-inter text-[13px] text-[#606060] leading-relaxed font-medium">{notification.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotification(null)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 text-[#8B8B8B] transition-fluid"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        )}
       </main>
+
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => { setShowDeleteConfirm(false); setEditingUser(null); }}>

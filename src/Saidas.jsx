@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 
-export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, setSaidaInsumosList, produtosList, setProdutosList, insumosList, setInsumosList, isAddModalOpen, setIsAddModalOpen, searchQuery }) {
-  const [activeTab, setActiveTab] = useState('produtos'); // Para o Modal
-  const [activeMainTab, setActiveMainTab] = useState('produtos'); // Para a Tela Principal
+export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, setSaidaInsumosList, produtosList, setProdutosList, insumosList, setInsumosList, fetchSaidas, fetchSaidaInsumos, fetchProdutos, fetchInsumos, isAddModalOpen, setIsAddModalOpen, searchQuery, setNotification }) {
+  const [activeTab, setActiveTab] = useState('produtos');
+  const [activeMainTab, setActiveMainTab] = useState('produtos');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingSaida, setEditingSaida] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteAction, setDeleteAction] = useState(null);
-  const [notification, setNotification] = useState(null);
+
   const ITEMS_PER_PAGE = 20;
 
-  // Escape Key listener for Modais
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -23,31 +23,36 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     return () => window.removeEventListener('keydown', handleEsc);
   }, [setIsAddModalOpen]);
 
-  // Form states (Products)
   const [cliente, setCliente] = useState('');
   const [produtoId, setProdutoId] = useState('');
   const [quantidade, setQuantidade] = useState('');
+  const [valorUnitario, setValorUnitario] = useState('');
+  const [desconto, setDesconto] = useState('0');
   const [total, setTotal] = useState('');
   const [status, setStatus] = useState('pendente');
 
-  // Insumo Exit States
   const [selectedInsumoId, setSelectedInsumoId] = useState('');
   const [insumoQtde, setInsumoQtde] = useState('1');
   const [insumoUnidade, setInsumoUnidade] = useState('');
 
-  // Auto-calculation logic for products
   useEffect(() => {
     if (produtoId && quantidade) {
       const selected = produtosList.find(p => String(p.id) === String(produtoId));
       if (selected) {
-        const unitPriceStr = selected.venda.replace('R$', '').replace('.', '').replace(',', '.').trim();
-        const unitPrice = parseFloat(unitPriceStr) || 0;
+        if (!editingSaida && !valorUnitario) {
+            const price = parseFloat(selected.venda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+            setValorUnitario(String(price));
+        }
+
+        const unit = parseFloat(valorUnitario) || 0;
         const qty = parseFloat(quantidade) || 0;
-        const calculatedTotal = unitPrice * qty;
-        setTotal(calculatedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        const desc = parseFloat(desconto) || 0;
+        
+        const calculatedTotal = (unit * qty) - desc;
+        setTotal(calculatedTotal.toFixed(2));
       }
     }
-  }, [produtoId, quantidade, produtosList]);
+  }, [produtoId, quantidade, valorUnitario, desconto, produtosList, editingSaida]);
 
   const filteredSaidas = saidasList.filter(s => 
     s.cliente.toLowerCase().includes((searchQuery || '').toLowerCase()) || 
@@ -76,81 +81,118 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
       const prod = produtosList.find(p => p.nome === item.produto);
       setProdutoId(prod ? prod.id : '');
       setQuantidade(item.qtde);
+      setValorUnitario(String(item.valorUnitario || 0));
+      setDesconto(String(item.desconto || 0));
       setStatus(item.status);
-      setTotal(item.total);
+      setTotal(String(item.totalNum || 0));
     } else {
       const ins = insumosList.find(i => i.nome === item.nome);
       setSelectedInsumoId(ins ? ins.id : '');
       setInsumoQtde(item.qtde);
+      setInsumoUnidade(ins ? ins.unidade : '');
     }
   };
 
-  const handleSaveSaida = () => {
-    if (activeTab === 'produtos') {
-      if (!cliente || !produtoId || !quantidade) return;
-      const produtoObj = produtosList.find(p => String(p.id) === String(produtoId));
-      
-      if (!editingSaida && produtoObj && parseFloat(quantidade) > parseFloat(produtoObj.qtd)) {
-        setNotification({ title: 'Saída Bloqueada', message: `Você não tem ${quantidade} unidades de ${produtoObj.nome} em estoque (Saldo atual: ${produtoObj.qtd}).`, type: 'error' });
-        return;
-      }
-
-      const newId = editingSaida ? editingSaida.id : (Math.max(0, ...saidasList.map(s => parseInt(s.id) || 0)) + 1).toString();
-      const newItem = { 
-        id: newId, 
-        cliente, 
-        produto: produtoObj?.nome || 'Produto', 
-        qtde: parseInt(quantidade), 
-        total: total, 
-        data: editingSaida ? editingSaida.data : new Date().toLocaleDateString('pt-BR'), 
-        status 
-      };
-
-      if (editingSaida) {
-          setSaidasList(saidasList.map(s => s.id === editingSaida.id ? newItem : s));
-      } else {
-          if (produtoObj) {
-            const novaQtdeProd = parseFloat(produtoObj.qtd) - parseFloat(quantidade);
-            setProdutosList(produtosList.map(p => String(p.id) === String(produtoId) ? { ...p, qtd: novaQtdeProd } : p));
-          }
-          setSaidasList([newItem, ...saidasList]);
-      }
-    } else {
-      if (!selectedInsumoId || !insumoQtde) return;
-      const insumo = insumosList.find(i => String(i.id) === String(selectedInsumoId));
-      if (insumo) {
-        if (!editingSaida) {
-           const usageUnit = insumoUnidade || insumo.unidade;
-           let conversionFactor = 1;
-           const baseUnit = insumo.unidade.toLowerCase();
-           const uUnit = usageUnit.toLowerCase();
-           
-           if (baseUnit === 'kg' && uUnit === 'g') conversionFactor = 0.001;
-           else if (baseUnit === 'l' && uUnit === 'ml') conversionFactor = 0.001;
-           else if (baseUnit === 'litro' && uUnit === 'ml') conversionFactor = 0.001;
-           else if (baseUnit === '100ml' && uUnit === 'ml') conversionFactor = 0.01;
-           else if (baseUnit === 'g' && uUnit === 'kg') conversionFactor = 1000;
-
-           const consumedAmount = parseFloat(insumoQtde) * conversionFactor;
-           const novaQtde = parseFloat(insumo.estoqueAtual) - consumedAmount;
-
-           if (novaQtde < 0) {
-             setNotification({ title: 'Baixa Bloqueada', message: `O estoque de ${insumo.nome} ficará negativo (${novaQtde.toFixed(3)} ${insumo.unidade}). Verifique a quantidade.`, type: 'error' });
-             return;
-           }
-
-           setInsumosList(insumosList.map(i => String(i.id) === String(selectedInsumoId) ? { ...i, estoqueAtual: novaQtde } : i));
-           setSaidaInsumosList([{ id: Date.now(), nome: insumo.nome, qtde: insumoQtde, unidade: usageUnit, data: new Date().toLocaleDateString('pt-BR') }, ...saidaInsumosList]);
-        } else {
-           setSaidaInsumosList(saidaInsumosList.map(s => s.id === editingSaida.id ? { ...s, qtde: insumoQtde, unidade: insumoUnidade || insumo.unidade, nome: insumo.nome } : s));
+  const handleSaveSaida = async () => {
+    try {
+      if (activeTab === 'produtos') {
+        if (!cliente || !produtoId || !quantidade) return;
+        const produtoObj = produtosList.find(p => String(p.id) === String(produtoId));
+        
+        if (!editingSaida && produtoObj && parseFloat(quantidade) > parseFloat(produtoObj.qtd)) {
+          setNotification({ title: 'Saída Bloqueada', message: `Você não tem ${formatBRNumber(quantidade, 0)} unidades de ${produtoObj.nome} em estoque (Saldo atual: ${formatBRNumber(produtoObj.qtd, 0)}).`, type: 'error' });
+          return;
         }
-      }
-    }
 
-    setNotification({ title: 'Sucesso!', message: editingSaida ? 'Registro atualizado.' : 'Saída registrada com sucesso.', type: 'success' });
-    setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
-    setEditingSaida(null);
-    setCliente(''); setProdutoId(''); setQuantidade(''); setTotal(''); setInsumoQtde(''); setSelectedInsumoId(''); setInsumoUnidade('');
+        const payload = {
+          produtoId: parseInt(produtoId),
+          cliente,
+          quantidade: parseFloat(quantidade),
+          valorUnitario: parseFloat(valorUnitario) || 0,
+          desconto: parseFloat(desconto) || 0,
+          total: parseFloat(total) || 0,
+          status
+        };
+
+        const res = await fetch(`http://localhost:3005/api/saidas/produtos${editingSaida ? '/' + editingSaida.id : ''}`, {
+          method: editingSaida ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Erro ao salvar saída de produto");
+
+        setNotification({ title: 'Sucesso!', message: `Saída de ${produtoObj?.nome || 'produto'} registrada.`, type: 'success' });
+      } else {
+        if (!selectedInsumoId || !insumoQtde) return;
+        const insumoObj = insumosList.find(i => String(i.id) === String(selectedInsumoId));
+        let realQtde = parseFloat(insumoQtde) || 0;
+        const baseUnit = (insumoObj?.unidade || '').toLowerCase();
+        const targetUnit = (insumoUnidade || baseUnit).toLowerCase();
+
+        if (baseUnit === 'kg' && targetUnit === 'g') realQtde = realQtde / 1000;
+        if (baseUnit === 'g' && targetUnit === 'kg') realQtde = realQtde * 1000;
+        if (baseUnit === 'l' && targetUnit === 'ml') realQtde = realQtde / 1000;
+        if (baseUnit === 'ml' && targetUnit === 'l') realQtde = realQtde * 1000;
+
+        if (!editingSaida && insumoObj && realQtde > parseFloat(insumoObj.estoqueAtual)) {
+          setNotification({ title: 'Estoque Insuficiente', message: `Você está tentando retirar ${formatBRNumber(realQtde, 3)} ${baseUnit}, mas só possui ${formatBRNumber(insumoObj.estoqueAtual, 3)} em estoque.`, type: 'error' });
+          return;
+        }
+
+        const payload = {
+          insumoId: parseInt(selectedInsumoId),
+          quantidade: realQtde,
+          status: 'saída'
+        };
+
+        const res = await fetch(`http://localhost:3005/api/saidas/insumos${editingSaida ? '/' + editingSaida.id : ''}`, {
+          method: editingSaida ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Erro ao salvar saída de insumo");
+
+        setNotification({ title: 'Sucesso!', message: `Saída de ${insumoObj?.nome || 'insumo'} registrada.`, type: 'success' });
+      }
+
+      if (fetchSaidas) await fetchSaidas();
+      if (fetchSaidaInsumos) await fetchSaidaInsumos();
+      if (fetchProdutos) await fetchProdutos();
+      if (fetchInsumos) await fetchInsumos();
+
+      setIsAddModalOpen(false);
+      setEditingSaida(null);
+      setCliente(''); setProdutoId(''); setQuantidade(''); setValorUnitario(''); setDesconto('0'); setTotal(''); setSelectedInsumoId(''); setInsumoQtde('');
+    } catch (e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message), type: 'error' });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteAction) return;
+    try {
+      const endpoint = deleteAction.type === 'produtos' ? 'saidas/produtos' : 'saidas/insumos';
+      const res = await fetch(`http://localhost:3005/api/${endpoint}/${deleteAction.id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error("Erro ao excluir saída");
+
+      if (fetchSaidas) await fetchSaidas();
+      if (fetchSaidaInsumos) await fetchSaidaInsumos();
+      if (fetchProdutos) await fetchProdutos();
+      if (fetchInsumos) await fetchInsumos();
+
+      setNotification({ title: 'Excluído!', message: 'O registro foi removido e o estoque ajustado.', type: 'info' });
+      setShowDeleteModal(false);
+      setDeleteAction(null);
+      setIsAddModalOpen(false);
+    } catch (e) {
+      console.error(e);
+      setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message), type: 'error' });
+    }
   };
 
   const isFormValid = activeTab === 'produtos' 
@@ -185,6 +227,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                <div className="flex-1 text-left px-4">Cliente</div>
                <div className="flex-1 text-left px-4">Produto</div>
                <div className="w-[80px] text-center">Quant.</div>
+               <div className="w-[100px] text-center">Desconto</div>
                <div className="w-[110px] text-center">Total</div>
                <div className="w-[110px] text-center">Data</div>
                <div className="w-[100px] text-center">Status</div>
@@ -210,10 +253,11 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                paginatedSaidas.map((saida, idx) => (
                  <div key={saida.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-fluid hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0 anim-slide-up">
                    <div className="w-[80px] text-center text-[#0D0D0D]">{saida.id || '-'}</div>
-                   <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{saida.cliente || '-'}</div>
-                   <div className="flex-1 text-left px-4 truncate">{saida.produto || '-'}</div>
-                   <div className="w-[80px] text-center">{saida.qtde || '-'}</div>
-                   <div className="w-[110px] text-center font-bold text-[#F84910]">R$ {saida.total || '0,00'}</div>
+                   <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold uppercase">{saida.cliente || '-'}</div>
+                   <div className="flex-1 text-left px-4 truncate uppercase">{saida.produto || '-'}</div>
+                    <div className="w-[80px] text-center">{saida.qtde || '-'}</div>
+                    <div className="w-[100px] text-center text-red-500 font-bold">{saida.desconto > 0 ? `- R$ ${Number(saida.desconto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}</div>
+                    <div className="w-[110px] text-center font-bold text-[#F84910]">{saida.total || '0,00'}</div>
                    <div className="w-[110px] text-center">{saida.data || '-'}</div>
                    <div className="w-[100px] flex justify-center">
                       <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${saida.status === 'entregue' ? 'bg-green-50 text-[#36BA6F]' : 'bg-orange-50 text-[#F84910]'}`}>{saida.status}</div>
@@ -234,7 +278,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
         ) : (
           <>
             <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4 font-inter text-xs font-medium text-[#606060]">
-               <div className="w-[80px] text-center">Ordem</div>
+               <div className="w-[80px] text-center">Código</div>
                <div className="flex-1 text-left px-4">Insumo</div>
                <div className="w-[100px] text-center">Quantidade</div>
                <div className="w-[120px] text-center">Status</div>
@@ -243,8 +287,8 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
             </div>
             {paginatedSaidaInsumos.map((entry, idx) => (
               <div key={entry.id} className="flex h-[50px] w-full items-center justify-between rounded-lg bg-white px-4 font-inter text-xs font-medium text-[#606060] transition-fluid hover:bg-slate-50 border-b border-[#F0F0F3] last:border-0 anim-slide-up">
-                <div className="w-[80px] text-center text-[#0D0D0D]">{idx + 1}</div>
-                <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold">{entry.nome || '-'}</div>
+                <div className="w-[80px] text-center text-[#0D0D0D] font-medium">{entry.id || '-'}</div>
+                <div className="flex-1 text-left px-4 text-[#0D0D0D] font-semibold uppercase">{entry.nome || '-'}</div>
                 <div className="w-[100px] text-center font-bold text-red-500">-{entry.qtde || '-'}</div>
                 <div className="w-[120px] flex justify-center">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -332,24 +376,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
             className="relative flex w-full max-w-[500px] flex-col gap-5 rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300"
             onMouseDown={e => e.stopPropagation()}
           >
-            {notification && (
-              <div className={`mb-2 flex items-start gap-3 rounded-lg border p-4 animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'border-green-100 bg-green-50' : notification.type === 'info' ? 'border-blue-100 bg-blue-50' : 'border-red-100 bg-red-50'}`}>
-                <div className={`flex size-5 shrink-0 items-center justify-center rounded-full mt-0.5 text-white ${notification.type === 'success' ? 'bg-green-500' : notification.type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`}>
-                   {notification.type === 'success' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                   ) : notification.type === 'info' ? (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                   ) : (
-                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                   )}
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <h4 className={`font-plus-jakarta text-sm font-bold ${notification.type === 'success' ? 'text-green-800' : notification.type === 'info' ? 'text-blue-800' : 'text-red-800'}`}>{notification.title}</h4>
-                  <p className={`font-inter text-xs leading-relaxed ${notification.type === 'success' ? 'text-green-600' : notification.type === 'info' ? 'text-blue-600' : 'text-red-600'}`}>{notification.message}</p>
-                </div>
-                <button onClick={() => setNotification(null)} className="text-gray-400 hover:bg-gray-100 rounded transition size-6 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-              </div>
-            )}
+
             <div className="flex h-[40px] w-full items-center justify-between border-b border-[#F0F0F3] pb-4 mb-2">
               <h3 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">
                 {editingSaida ? 'Editar Registro / Saída' : 'Adicionar Nova Saída'}
@@ -384,41 +411,86 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                     <input type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-center text-sm" />
                   </div>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Status</label>
-                  <select value={status} onChange={e => setStatus(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm">
-                    <option value="pendente">Pendente</option>
-                    <option value="enviado">Enviado</option>
-                    <option value="entregue">Entregue</option>
-                  </select>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Status</label>
+                    <select value={status} onChange={e => setStatus(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm">
+                      <option value="pendente">Pendente</option>
+                      <option value="enviado">Enviado</option>
+                      <option value="entregue">Entregue</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-4 p-4 bg-orange-50/50 rounded-xl border border-orange-100/50">
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <label className="font-plus-jakarta text-[10px] font-bold text-[#F84910] uppercase tracking-wider">Preço Unit. (R$)</label>
+                      <input type="number" step="0.01" value={valorUnitario} onChange={e => setValorUnitario(e.target.value)} className="h-10 w-full rounded-lg border border-orange-200 bg-white px-3 text-sm font-bold text-[#0D0D0D]" />
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <label className="font-plus-jakarta text-[10px] font-bold text-red-500 uppercase tracking-wider">Desconto (R$)</label>
+                      <input type="number" step="0.01" value={desconto} onChange={e => setDesconto(e.target.value)} className="h-10 w-full rounded-lg border border-red-200 bg-white px-3 text-sm font-bold text-red-600" />
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <label className="font-plus-jakarta text-[10px] font-bold text-[#606060] uppercase tracking-wider">Total Final</label>
+                      <div className="h-10 w-full flex items-center px-3 rounded-lg bg-white border border-gray-200 font-bold text-[#F84910]">
+                        R$ {Number(total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ) : (
+              ) : (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Escolher Insumo para Baixa</label>
-                  <select value={selectedInsumoId} onChange={e => setSelectedInsumoId(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm">
+                  <select 
+                    value={selectedInsumoId} 
+                    onChange={e => {
+                      const id = e.target.value;
+                      setSelectedInsumoId(id);
+                      const ins = insumosList.find(i => String(i.id) === String(id));
+                      if (ins) setInsumoUnidade(ins.unidade);
+                    }} 
+                    className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm"
+                  >
                     <option value="">Selecione...</option>
-                    {insumosList.map(i => <option key={i.id} value={i.id}>{i.nome} (Estoque: {Number(i.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {i.unidade})</option>)}
+                    {insumosList.map(i => <option key={i.id} value={i.id}>{(i.nome.charAt(0).toUpperCase() + i.nome.slice(1))} (Estoque: {Number(i.estoqueAtual).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} {i.unidade})</option>)}
                   </select>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1 flex flex-col gap-1.5">
-                    <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Quantidade (Ex: 0.5 ou 100)</label>
-                    <input type="number" step="any" value={insumoQtde} onChange={e => setInsumoQtde(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm" />
+                    <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Quantidade</label>
+                    <input 
+                      type="number" 
+                      step="any" 
+                      value={insumoQtde} 
+                      onChange={e => setInsumoQtde(e.target.value)} 
+                      className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm" 
+                      placeholder="0.00"
+                    />
                   </div>
                   <div className="w-[140px] flex flex-col gap-1.5">
-                    <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Unidade Utilizada</label>
-                    <select value={insumoUnidade} onChange={e => setInsumoUnidade(e.target.value)} className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm">
-                      <option value="">Referência</option>
-                      <option value="kg">kg</option>
-                      <option value="g">g</option>
-                      <option value="L">L</option>
-                      <option value="ml">ml</option>
-                      <option value="100ml">100ml</option>
-                      <option value="unid">unid</option>
-                      <option value="pacote">pacote</option>
-                      <option value="caixa">caixa</option>
+                    <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Unidade</label>
+                    <select 
+                      value={insumoUnidade} 
+                      onChange={e => setInsumoUnidade(e.target.value)} 
+                      className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm"
+                    >
+                      {(() => {
+                        const ins = insumosList.find(i => String(i.id) === String(selectedInsumoId));
+                        const base = (ins?.unidade || '').toLowerCase();
+                        if (base === 'kg' || base === 'g') return (
+                          <>
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                          </>
+                        );
+                        if (base === 'l' || base === 'ml') return (
+                          <>
+                            <option value="L">L</option>
+                            <option value="ml">ml</option>
+                          </>
+                        );
+                        return <option value={ins?.unidade || 'unid'}>{ins?.unidade || 'unid'}</option>;
+                      })()}
                     </select>
                   </div>
                 </div>
@@ -496,11 +568,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                 Cancelar
               </button>
               <button 
-                onClick={deleteAction} 
-                onMouseDown={() => {
-                  setNotification({ title: 'Cancelado!', message: 'O registro de saída foi cancelado com sucesso.', type: 'info' });
-                  setTimeout(() => setNotification(null), 3000);
-                }}
+                onClick={confirmDelete} 
                 className="flex-1 h-11 rounded-lg bg-[#BA0000] font-plus-jakarta text-sm font-bold text-white hover:bg-red-700 transition-fluid shadow-md hover-scale cursor-pointer"
               >
                 Sim, Excluir
