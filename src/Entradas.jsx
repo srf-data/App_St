@@ -97,7 +97,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     setFormErrors({});
 
     try {
-      const response = await fetch('http://localhost:3005/api/entradas/produtos', {
+      const response = await fetch('/api/entradas/produtos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,7 +202,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
     setFormErrors({});
     try {
-      const response = await fetch('http://localhost:3005/api/entradas/insumos', {
+      const response = await fetch('/api/entradas/insumos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

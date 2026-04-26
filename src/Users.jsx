@@ -194,8 +194,8 @@ export default function Users({ onLogout, currentUser }) {
 
     try {
       const url = editingUser 
-        ? `http://localhost:3005/api/usuarios/${editingUser.id}` 
-        : 'http://localhost:3005/api/usuarios';
+        ? `/api/usuarios/${editingUser.id}` 
+        : '/api/usuarios';
       const method = editingUser ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
@@ -236,7 +236,7 @@ export default function Users({ onLogout, currentUser }) {
   const handleConfirmDelete = async () => {
     if (editingUser) {
       try {
-        const res = await fetch(`http://localhost:3005/api/usuarios/${editingUser.id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/usuarios/${editingUser.id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Erro ao remover usuário.');
 
         const isSelfDeletion = editingUser.id === currentUser?.id;
@@ -279,7 +279,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchFornecedores = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/fornecedores');
+      const res = await fetch('/api/fornecedores');
       if (res.ok) {
         const data = await res.json();
         setFornecedoresList(data);
@@ -291,7 +291,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchInsumos = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/insumos');
+      const res = await fetch('/api/insumos');
       if (res.ok) {
         const data = await res.json();
         console.log('[DEBUG] Insumos recebidos do servidor:', data.map(i => ({ id: i.id, nome: i.nome, temFoto: !!i.foto, lenFoto: i.foto?.length || 0 })));
@@ -304,7 +304,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchProdutos = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/produtos');
+      const res = await fetch('/api/produtos');
       if (res.ok) {
         const data = await res.json();
         setProdutosList(data);
@@ -316,7 +316,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchEntradas = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/entradas');
+      const res = await fetch('/api/entradas');
       if (res.ok) {
         const data = await res.json();
         setEntradasList(data);
@@ -328,7 +328,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchSaidas = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/saidas/produtos');
+      const res = await fetch('/api/saidas/produtos');
       if (res.ok) {
         const data = await res.json();
         setSaidasList(data);
@@ -340,7 +340,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchSaidaInsumos = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/saidas/insumos');
+      const res = await fetch('/api/saidas/insumos');
       if (res.ok) {
         const data = await res.json();
         setSaidaInsumosList(data);
@@ -352,7 +352,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchUsuarios = async () => {
     try {
-      const res = await fetch('http://localhost:3005/api/usuarios');
+      const res = await fetch('/api/usuarios');
       if (res.ok) {
         const data = await res.json();
         setUsuariosList(data);

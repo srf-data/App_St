@@ -117,7 +117,7 @@ export default function MateriasPrimas({
 
     try {
       if (editingItem) {
-        const res = await fetch(`http://localhost:3005/api/insumos/${editingItem.id}`, {
+        const res = await fetch(`/api/insumos/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -133,7 +133,7 @@ export default function MateriasPrimas({
           setNotification({ title: 'Erro', message: errorData.error || res.statusText, type: 'error' });
         }
       } else {
-        const res = await fetch('http://localhost:3005/api/insumos', {
+        const res = await fetch('/api/insumos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -167,7 +167,7 @@ export default function MateriasPrimas({
     if (!itemToDelete) return;
 
     try {
-      const res = await fetch(`http://localhost:3005/api/insumos/${itemToDelete.id}`, {
+      const res = await fetch(`/api/insumos/${itemToDelete.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

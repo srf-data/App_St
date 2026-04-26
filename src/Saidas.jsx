@@ -114,7 +114,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
           status
         };
 
-        const res = await fetch(`http://localhost:3005/api/saidas/produtos${editingSaida ? '/' + editingSaida.id : ''}`, {
+        const res = await fetch(`/api/saidas/produtos${editingSaida ? '/' + editingSaida.id : ''}`, {
           method: editingSaida ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -146,7 +146,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
           status: 'saída'
         };
 
-        const res = await fetch(`http://localhost:3005/api/saidas/insumos${editingSaida ? '/' + editingSaida.id : ''}`, {
+        const res = await fetch(`/api/saidas/insumos${editingSaida ? '/' + editingSaida.id : ''}`, {
           method: editingSaida ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -175,7 +175,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     if (!deleteAction) return;
     try {
       const endpoint = deleteAction.type === 'produtos' ? 'saidas/produtos' : 'saidas/insumos';
-      const res = await fetch(`http://localhost:3005/api/${endpoint}/${deleteAction.id}`, {
+      const res = await fetch(`/api/${endpoint}/${deleteAction.id}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error("Erro ao excluir saída");

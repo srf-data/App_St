@@ -44,8 +44,8 @@ const calcularPrecoProporcional = (precoInsumo, unitInsumo, qtdUsada, unitUsada)
 };
 
 const app = express();
-const PORT = 3005;
-const JWT_SECRET = 'solart_secret_key_123';
+const PORT = process.env.PORT || 3005;
+const JWT_SECRET = process.env.JWT_SECRET || 'solart_secret_key_123';
 const DB_PATH = path.join(__dirname, 'db.json');
 
 async function recalcularPrecosProdutos(prismaInstance) {
@@ -1447,10 +1447,18 @@ app.delete('/api/saidas/insumos/:id', async (req, res) => {
     }
 });
 
-// Final 404 handler
-app.use((req, res) => {
-    console.log(`[404] ${req.method} ${req.url}`);
-    res.status(404).send(`Route ${req.url} not found on this server.`);
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+    // Se for uma rota de API que não foi encontrada, retorna 404 normal
+    if (req.url.startsWith('/api/')) {
+        return res.status(404).json({ error: `Route ${req.url} not found` });
+    }
+    // Caso contrário, serve o index.html (para suporte a SPA routing)
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 app.listen(PORT, async () => {

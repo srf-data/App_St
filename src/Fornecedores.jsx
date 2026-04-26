@@ -82,7 +82,7 @@ export default function Fornecedores({
 
     try {
       if (editingItem) {
-        const res = await fetch(`http://localhost:3005/api/fornecedores/${editingItem.id}`, {
+        const res = await fetch(`/api/fornecedores/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -94,7 +94,7 @@ export default function Fornecedores({
           if (fetchFornecedores) await fetchFornecedores();
         }
       } else {
-        const res = await fetch('http://localhost:3005/api/fornecedores', {
+        const res = await fetch('/api/fornecedores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -129,7 +129,7 @@ export default function Fornecedores({
     if (!fornToDelete) return;
 
     try {
-      const res = await fetch(`http://localhost:3005/api/fornecedores/${fornToDelete.id}`, {
+      const res = await fetch(`/api/fornecedores/${fornToDelete.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
