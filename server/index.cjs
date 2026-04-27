@@ -1445,8 +1445,8 @@ app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, async () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`[${new Date().toLocaleTimeString()}] >>> SERVER LIVE ON PORT ${PORT} (0.0.0.0) <<<`);
     try {
         await recalcularPrecosProdutos(prisma);
     } catch (e) {
