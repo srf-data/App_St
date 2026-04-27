@@ -153,6 +153,8 @@ export default function MateriasPrimas({
     } catch (e) {
       console.error(e);
       setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha na comunicação com o servidor', type: 'error' });
+    } finally {
+      setLoading(false);
     }
 
     setNome(''); setFornecedorId(''); setUnidade(''); setCusto(''); setEstoque(''); setTamanhoEmbalagem('1'); setImagem(null); setImagePreview(null);
@@ -663,7 +665,7 @@ export default function MateriasPrimas({
                   }
                 }}
               >
-                <span>Salvar e Atualizar</span>
+                <span>{loading ? 'Salvando...' : 'Salvar e Atualizar'}</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`${isFormValid ? 'animate-[pulse_2s_infinite]' : ''}`}>
                   <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                   <polyline points="17 21 17 13 7 13 7 21"></polyline>

@@ -161,7 +161,10 @@ export default function Users({ onLogout, currentUser }) {
     }
   };
 
+  const [loading, setLoading] = useState(false);
+
   const handleSaveUser = async () => {
+    if (loading) return;
     const dataToValidate = {
       nome: newNome,
       email: newEmail,
@@ -208,7 +211,8 @@ export default function Users({ onLogout, currentUser }) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Erro ao salvar usuário.');
       }
-
+      
+      setLoading(true);
       await fetchUsuarios();
       setNotification({ 
         title: 'Sucesso!', 
@@ -221,6 +225,8 @@ export default function Users({ onLogout, currentUser }) {
     } catch (error) {
       console.error(error);
       setNotification({ title: 'Erro ao Salvar', message: error.message, type: 'error' });
+    } finally {
+      setLoading(false);
     }
 
     setIsAddingUser(false);
@@ -708,10 +714,15 @@ export default function Users({ onLogout, currentUser }) {
                           </button>
                           <button
                             onClick={handleSaveUser}
-                            className={`flex h-[34px] items-center gap-2 px-4 rounded-lg transition-all duration-500 ease-in-out ${isFormValid ? 'bg-[#36BA6F] hover:bg-[#2e9c5d]' : 'bg-[rgba(139,139,139,0.2)] hover:bg-gray-200'} cursor-pointer`}
+                            disabled={loading}
+                            className={`flex h-11 items-center justify-center gap-3 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid hover-scale shadow-md ${!loading ? 'bg-[#36BA6F] text-[#BDFFDA] cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
                           >
-                            <span className={`font-plus-jakarta text-sm font-semibold transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}>Salvar e Atualizar</span>
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors duration-500 ${isFormValid ? 'text-[#BDFFDA]' : 'text-[#6E6E6E]'}`}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            <span>{loading ? 'Processando...' : 'Salvar Registro'}</span>
+                            {loading ? (
+                              <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            )}
                           </button>
                         </div>
                       </div>

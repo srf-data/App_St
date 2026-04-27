@@ -106,14 +106,21 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     }
   };
 
+  const [loading, setLoading] = useState(false);
+
   const handleSaveSaida = async () => {
+    if (loading) return;
+    if (activeTab === 'produtos' && (!cliente || !produtoId || !quantidade)) return;
+    if (activeTab === 'insumos' && (!selectedInsumoId || !insumoQtde)) return;
+    setLoading(true);
+
     try {
       if (activeTab === 'produtos') {
-        if (!cliente || !produtoId || !quantidade) return;
         const produtoObj = produtosList.find(p => String(p.id) === String(produtoId));
         
         if (!editingSaida && produtoObj && parseFloat(quantidade) > parseFloat(produtoObj.qtd)) {
           setNotification({ title: 'Saída Bloqueada', message: `Você não tem ${formatBRNumber(quantidade, 0)} unidades de ${produtoObj.nome} em estoque (Saldo atual: ${formatBRNumber(produtoObj.qtd, 0)}).`, type: 'error' });
+          setLoading(false);
           return;
         }
 
@@ -137,7 +144,6 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
 
         setNotification({ title: 'Sucesso!', message: `Saída de ${produtoObj?.nome || 'produto'} registrada.`, type: 'success' });
       } else {
-        if (!selectedInsumoId || !insumoQtde) return;
         const insumoObj = insumosList.find(i => String(i.id) === String(selectedInsumoId));
         let realQtde = parseFloat(insumoQtde) || 0;
         const baseUnit = (insumoObj?.unidade || '').toLowerCase();
@@ -150,6 +156,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
 
         if (!editingSaida && insumoObj && realQtde > parseFloat(insumoObj.estoqueAtual)) {
           setNotification({ title: 'Estoque Insuficiente', message: `Você está tentando retirar ${formatBRNumber(realQtde, 3)} ${baseUnit}, mas só possui ${formatBRNumber(insumoObj.estoqueAtual, 3)} em estoque.`, type: 'error' });
+          setLoading(false);
           return;
         }
 
@@ -176,11 +183,12 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
       if (fetchInsumos) await fetchInsumos();
 
       setIsAddModalOpen(false);
-      setEditingSaida(null);
-      setCliente(''); setProdutoId(''); setQuantidade(''); setValorUnitario(''); setDesconto('0'); setTotal(''); setSelectedInsumoId(''); setInsumoQtde('');
+      clearForm();
     } catch (e) {
       console.error(e);
       setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message), type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -516,14 +524,12 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                    onClick={() => {
                      setDeleteAction(() => () => {
                        if (activeTab === 'produtos') {
-                         // Devolver ao estoque de produtos
                          const prod = produtosList.find(p => p.nome === editingSaida.produto);
                          if (prod) {
                            setProdutosList(produtosList.map(p => p.id === prod.id ? { ...p, qtd: p.qtd + (editingSaida.qtde || 0) } : p));
                          }
                          setSaidasList(saidasList.filter(s => s.id !== editingSaida.id));
                        } else {
-                         // Devolver ao estoque de insumos
                          const ins = insumosList.find(i => i.nome === editingSaida.nome);
                          if (ins) {
                            setInsumosList(insumosList.map(i => i.id === ins.id ? { ...i, estoqueAtual: i.estoqueAtual + (editingSaida.qtde || 0) } : i));
@@ -542,18 +548,18 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                     <span>Excluir</span>
                  </button>
                )}
-              <button 
-                onClick={handleSaveSaida}
-                onMouseDown={() => {
-                   if (!isFormValid) {
-                     setNotification({ title: 'Campos Obrigatórios', message: 'Por favor, preencha todos os campos necessários para registrar a saída.', type: 'error' });
-                   }
-                }}
-                className={`flex h-11 max-w-[280px] ml-auto items-center justify-center gap-3 flex-1 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid shadow-md ${isFormValid ? 'bg-[#36BA6F] text-[#BDFFDA] hover:scale-105 cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
-              >
-                <span>Confirmar Registro</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-              </button>
+                <button 
+                  onClick={handleSaveSaida}
+                  disabled={loading || !isFormValid}
+                  className={`flex h-11 items-center justify-center gap-3 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid hover-scale shadow-md ${!loading && isFormValid ? 'bg-[#36BA6F] text-[#BDFFDA] cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
+                >
+                  <span>{loading ? 'Processando...' : 'Salvar Registro'}</span>
+                  {loading ? (
+                    <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                  )}
+                </button>
             </div>
           </div>
         </div>

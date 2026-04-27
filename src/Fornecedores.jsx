@@ -61,8 +61,11 @@ export default function Fornecedores({
   const totalPages = Math.ceil(filteredFornecedores.length / ITEMS_PER_PAGE) || 1;
   const paginatedFornecedores = filteredFornecedores.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const [loading, setLoading] = useState(false);
+
   const handleSaveFornecedor = async () => {
-    if (!razaoSocial.trim()) return;
+    if (!razaoSocial.trim() || loading) return;
+    setLoading(true);
 
     let finalCnpj = cnpj.trim();
     if (!finalCnpj) {
@@ -75,6 +78,7 @@ export default function Fornecedores({
           message: 'O CNPJ deve estar no formato 00.000.000/0000-00 ou ser deixado em branco.', 
           type: 'error' 
         });
+        setLoading(false);
         return;
       }
     }
@@ -110,6 +114,8 @@ export default function Fornecedores({
       console.error(e);
       setNotification({ title: 'Erro', message: 'Falha na comunicação com o servidor', type: 'error' });
       setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setLoading(false);
     }
 
     setRazaoSocial('');
@@ -375,19 +381,24 @@ export default function Fornecedores({
                     Excluir
                   </button>
                 )}
-              </div>
-              <button 
+                  <button 
                 onClick={handleSaveFornecedor}
-                className={`flex h-11 items-center justify-center gap-3 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid hover-scale shadow-md ${isFormValid ? 'bg-[#36BA6F] text-[#BDFFDA] cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
+                disabled={!isFormValid || loading}
+                className={`flex h-11 items-center justify-center gap-3 rounded-lg px-8 font-plus-jakarta text-sm font-semibold tracking-wide transition-fluid hover-scale shadow-md ${isFormValid && !loading ? 'bg-[#36BA6F] text-[#BDFFDA] cursor-pointer' : 'bg-[#F0F0F3] text-[#BEBEBE] cursor-not-allowed opacity-60'}`}
                 onMouseDown={() => {
-                  if (!isFormValid) {
+                  if (!isFormValid && !loading) {
                     setNotification({ title: 'Campos Obrigatórios', message: 'Por favor, preencha a Razão Social do fornecedor.', type: 'error' });
                   }
                 }}
               >
-                <span>Salvar e Atualizar</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <span>{loading ? 'Processando...' : 'Salvar e Atualizar'}</span>
+                {loading ? (
+                   <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                )}
               </button>
+         </button>
             </div>
           </div>
         </div>

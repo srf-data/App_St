@@ -66,20 +66,11 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     }
   }, [curInsumoNome, insumosList]);
 
-  const validEntradas = (entradasList || []).filter(e => {
+  const filteredEntradas = (entradasList || []).filter(e => {
     if (!e) return false;
-    if (!e.fornecedor) {
-       e.fornecedor = 'Sem Fornecedor';
-    }
-    const fName = String(e.fornecedor).toLowerCase().trim();
-    if (fName === 'produção própria' || fName === 'producao propria' || fName === 'sem fornecedor') return true;
-    return (fornecedoresList || []).some(f => (f.fantasia || '').toLowerCase().trim() === fName);
-  });
-
-  const filteredEntradas = validEntradas.filter(e => {
-    const searchMatch = e.razao?.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+    const searchMatch = (e.razao || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
       (e.fornecedor || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-      e.id.toString().includes(searchQuery || '');
+      (e.id || '').toString().includes(searchQuery || '');
 
     if (activeMainTab === 'produtos') {
       return searchMatch && e.fornecedor === 'Produção Própria';
@@ -209,10 +200,13 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     setInsumoToRemoveId(null);
   };
 
-  const handleSaveProduto = async () => {
-    // Basic validation
+  const handleSaveEntrada = async () => {
+    if (loading) return;
+    setLoading(true);
+
     if (!nomeProduto || nomeProduto.trim() === '' || insumosAdicionados.length === 0) {
       setNotification({ title: 'Atenção', message: 'Selecione o fornecedor e adicione ao menos um insumo.', type: 'warning' });
+      setLoading(false);
       return;
     }
 
@@ -235,6 +229,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
       await fetchEntradas();
       await fetchInsumos();
+      if (fetchProdutos) await fetchProdutos();
 
       setNotification({ title: 'Sucesso!', message: editingEntrada ? 'Registro atualizado com sucesso.' : 'Entrada(s) de insumo registrada(s).', type: 'success' });
       setTimeout(() => { setNotification(null); setIsAddModalOpen(false); }, 1500);
@@ -244,10 +239,10 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
       setEntradaInsumoDesconto('');
       setEntradaProdutoDesconto('');
     } catch (error) {
-      console.error("Erro ao salvar entrada:", error);
-      setNotification({ title: 'Erro ao Salvar', message: cleanNotificationMessage(error.message), type: 'error' });
-      setIsAddModalOpen(false);
-      setEditingEntrada(null);
+      console.error(error);
+      setNotification({ title: 'Erro ao Salvar', message: cleanNotificationMessage(error.message) || 'Falha na comunicação com o servidor', type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -631,7 +626,6 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                         >
                           <option value="">{nomeProduto ? 'Selecione um insumo...' : 'Selecione o fornecedor primeiro'}</option>
                           {insumosList
-                            .filter(m => (fornecedoresList || []).some(f => (f.fantasia || '').toLowerCase().trim() === (m.fornecedor || '').toLowerCase().trim()))
                             .filter(m => {
                               const mForn = (m.fornecedor || '').toLowerCase();
                               const searchForn = (nomeProduto || '').toLowerCase();
