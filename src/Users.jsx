@@ -269,8 +269,8 @@ export default function Users({ onLogout, currentUser }) {
     setNewNome(user.nome);
     setNewEmail(user.email);
     setNewConfirmEmail(user.email);
-    setNewSenha(user.senha);
-    setNewConfirmSenha(user.senha);
+    setNewSenha('');
+    setNewConfirmSenha('');
     setImagePreview(user.foto);
     setIsAddingUser(true);
     setFormErrors({});
@@ -649,8 +649,8 @@ export default function Users({ onLogout, currentUser }) {
                         </div>
 
                         <div className="w-[120px]">
-                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Nova Senha</label>
-                          <input type="password" placeholder="Senha" value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Senha</label>
+                          <input type="password" placeholder={editingUser ? "Manter atual" : "Senha"} value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
                           {formErrors.senha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.senha}</p>}
                         </div>
                       </div>
@@ -673,7 +673,7 @@ export default function Users({ onLogout, currentUser }) {
 
                         <div className="w-[120px]">
                           <label className="block text-[10px] font-medium text-[#606060] mb-2 ml-1 uppercase text-center opacity-70">Confirmar Senha</label>
-                          <input type="password" placeholder="Confirmar Senha" value={newConfirmSenha} onChange={e => setNewConfirmSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmSenha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          <input type="password" placeholder={editingUser ? "Manter atual" : "Confirmar Senha"} value={newConfirmSenha} onChange={e => setNewConfirmSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmSenha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
                           {formErrors.confirmSenha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.confirmSenha}</p>}
                         </div>
                       </div>

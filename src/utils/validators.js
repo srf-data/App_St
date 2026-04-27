@@ -15,14 +15,17 @@ export const userSchema = z
     nome: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(120),
     email: z.string().trim().email('E-mail inválido').max(255),
     confirmEmail: z.string().trim().email('Confirmação de e-mail inválida'),
-    senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-    confirmSenha: z.string().min(6, 'Confirmação de senha inválida'),
+    senha: z.string().optional().or(z.string().min(6, 'Senha deve ter no mínimo 6 caracteres')),
+    confirmSenha: z.string().optional().or(z.string().min(6, 'Confirmação de senha inválida')),
   })
   .refine((data) => data.email === data.confirmEmail, {
     message: 'Os e-mails não coincidem',
     path: ['confirmEmail'],
   })
-  .refine((data) => data.senha === data.confirmSenha, {
+  .refine((data) => {
+    if (!data.senha && !data.confirmSenha) return true;
+    return data.senha === data.confirmSenha;
+  }, {
     message: 'As senhas não coincidem',
     path: ['confirmSenha'],
   });

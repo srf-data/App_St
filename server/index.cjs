@@ -156,11 +156,12 @@ app.get('/api/usuarios', async (req, res) => {
 app.post('/api/usuarios', async (req, res) => {
     const { nome, email, senha, foto } = req.body;
     try {
+        const hashed = await bcrypt.hash(senha, 10);
         const newUser = await prisma.usuarios.create({
             data: {
                 Nome_Usuario: nome,
                 email: email,
-                senha: senha,
+                senha: hashed,
                 foto: foto
             }
         });
@@ -176,14 +177,19 @@ app.put('/api/usuarios/:id', async (req, res) => {
     const { id } = req.params;
     const { nome, email, senha, foto } = req.body;
     try {
+        const updateData = {
+            Nome_Usuario: nome,
+            email: email,
+            foto: foto
+        };
+
+        if (senha && senha.trim() !== '') {
+            updateData.senha = await bcrypt.hash(senha, 10);
+        }
+
         const updated = await prisma.usuarios.update({
             where: { Cod_Usuario: Number(id) },
-            data: {
-                Nome_Usuario: nome,
-                email: email,
-                senha: senha,
-                foto: foto
-            }
+            data: updateData
         });
         res.json(mapUsuarioParaFrontend(updated));
     } catch (e) {
