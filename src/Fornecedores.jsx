@@ -8,6 +8,7 @@ export default function Fornecedores({
   fornecedoresList = [], 
   setFornecedoresList,
   insumosList = [],
+  setInsumosList,
   setProdutosList,
   setNotification
 }) {
