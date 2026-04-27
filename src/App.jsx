@@ -138,13 +138,16 @@ function App() {
       });
       const data = await response.json();
       if (response.ok) {
+        console.log('OTP enviado com sucesso, mudando para fase de código.');
         setOtpSent(true);
         setNotification({ 
           title: 'Código Enviado!', 
-          message: 'Enviamos um código para seu e-mail. Verifique sua caixa de entrada e spam.' 
+          message: 'Enviamos um código para seu e-mail. Verifique sua caixa de entrada e spam.',
+          type: 'success'
         });
       } else {
-        setNotification({ title: 'Erro', message: data.message });
+        console.warn('Erro ao enviar OTP:', data.message);
+        setNotification({ title: 'Erro', message: data.message, type: 'error' });
       }
     } catch (e) {
       setNotification({ title: 'Erro', message: 'Erro ao enviar código.' });
@@ -376,7 +379,7 @@ function App() {
 
       {/* MODAL ESQUECEU A SENHA */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px]">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px]">
           <div className="relative flex w-full max-w-[500px] flex-col items-center gap-8 rounded-lg border border-[#F0F0F3] bg-white p-8 shadow-2xl">
             {/* Close Button */}
             <button 
