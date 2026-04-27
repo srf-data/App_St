@@ -1,18 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const getBase64Logo = () => {
-    try {
-        const logoPath = path.join(__dirname, '..', 'src', 'assets', 'brand-logo-new.svg');
-        const svg = fs.readFileSync(logoPath, 'utf8');
-        return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-    } catch (e) {
-        return '';
-    }
-};
-
-const forgotPasswordTemplate = (otp) => {
-    const logoBase64 = getBase64Logo();
+const forgotPasswordTemplate = (otp, logoBase64) => {
+    // logoBase64 can be used if we want to show it, but for now we'll stick to the text-based logo or the provided one
     
     return `
     <!DOCTYPE html>
