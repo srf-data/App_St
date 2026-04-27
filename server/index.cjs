@@ -272,8 +272,7 @@ const otps = new Map();
 // Forgot Password
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
-    const db = readDB();
-    const user = db.users.find(u => u.email === email);
+    const user = await prisma.usuarios.findUnique({ where: { email: email } });
 
     if (!user) {
         return res.status(404).json({ title: 'Erro', message: 'E-mail não encontrado.' });
