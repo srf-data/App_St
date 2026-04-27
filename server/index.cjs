@@ -594,7 +594,7 @@ const mapProdutoParaFrontend = (p) => {
         insumosMapeados = p.custos.map(c => {
             const insumoAtual = c.insumo;
             const precoProp = insumoAtual 
-                ? calcularPrecoProporcional(insumoAtual.Custo_insumo, insumoAtual.unidade, c.Qtd_Utilizada, c.Unidade)
+                ? calculatePropCost(insumoAtual.Custo_insumo, insumoAtual.unidade, c.Qtd_Utilizada, c.Unidade)
                 : 0;
             
             custoTotalCalculado += precoProp;
@@ -672,7 +672,7 @@ app.post('/api/produtos', async (req, res) => {
                         create: (insumos || []).map(i => {
                             const unitCost = parseFloat(i.custoUnitario) || 0;
                             const unitQty = parseFloat(i.qtde) || 0;
-                            const precoPropRes = calcularPrecoProporcional(unitCost, i.unidadeOriginal || i.originalUnit || i.unidade, unitQty, i.unidade);
+                            const precoPropRes = calculatePropCost(unitCost, i.unidadeOriginal || i.originalUnit || i.unidade, unitQty, i.unidade);
                             return {
                                 Cod_Insumo: parseInt(i.id),
                                 Qtd_Utilizada: unitQty,
@@ -707,8 +707,8 @@ app.post('/api/produtos', async (req, res) => {
                         where: { Cod_Insumo: parseInt(item.id) }
                     });
                     if (insumoDB) {
-                        const fatorUsado = getFatorConversao(item.unidade);
-                        const fatorBase = getFatorConversao(insumoDB.unidade);
+                        const fatorUsado = getFactor(item.unidade);
+                        const fatorBase = getFactor(insumoDB.unidade);
                         const totalConsumidoEmBase = (parseFloat(item.qtde) * qty) * fatorUsado;
                         const deducaoNaUnidadeDoBanco = totalConsumidoEmBase / fatorBase;
 
@@ -770,7 +770,7 @@ app.put('/api/produtos/:id', async (req, res) => {
             // 2. Mapeamos o consumo anterior por insumo (Total consumido = Qtd_Utilizada * Qtd_Produto)
             const consumoAnteriorMap = {};
             produtoAnterior.custos.forEach(c => {
-                const fatorBase = getFatorConversao(c.Unidade);
+                const fatorBase = getFactor(c.Unidade);
                 consumoAnteriorMap[c.Cod_Insumo] = (Number(c.Qtd_Utilizada) * qtdAnterior) * fatorBase;
             });
 
@@ -791,7 +791,7 @@ app.put('/api/produtos/:id', async (req, res) => {
                     Comissao_Porcentagem: commNum,
                     custos: {
                         create: (insumos || []).map(i => {
-                            const precoPropRes = calcularPrecoProporcional(i.custoUnitario, i.unidadeOriginal || i.originalUnit || i.unidade, i.qtde, i.unidade);
+                            const precoPropRes = calculatePropCost(i.custoUnitario, i.unidadeOriginal || i.originalUnit || i.unidade, i.qtde, i.unidade);
                             return {
                                 Cod_Insumo: Number(i.id),
                                 Qtd_Utilizada: Number(i.qtde),
@@ -816,8 +816,8 @@ app.put('/api/produtos/:id', async (req, res) => {
                 });
 
                 if (insumoDB) {
-                    const fatorNovo = getFatorConversao(itemNovo.unidade);
-                    const fatorNoBanco = getFatorConversao(insumoDB.unidade);
+                    const fatorNovo = getFactor(itemNovo.unidade);
+                    const fatorNoBanco = getFactor(insumoDB.unidade);
                     
                     const consumoNovoTotalEmBase = (Number(itemNovo.qtde) * Number(novaQtde)) * fatorNovo;
                     const consumoAntigoTotalEmBase = consumoAnteriorMap[Number(itemNovo.id)] || 0;
@@ -841,7 +841,7 @@ app.put('/api/produtos/:id', async (req, res) => {
                 if (consumoAntigoBase > 0.00001) {
                     const insumoDB = await tx.insumo.findUnique({ where: { Cod_Insumo: Number(codInsumo) } });
                     if (insumoDB) {
-                        const fatorNoBanco = getFatorConversao(insumoDB.unidade);
+                        const fatorNoBanco = getFactor(insumoDB.unidade);
                         const devolucao = consumoAntigoBase / fatorNoBanco;
                         console.log(`[PUT /api/produtos] Devolvendo Insumo removido (ID ${codInsumo}): +${devolucao} ${insumoDB.unidade}`);
                         await tx.insumo.update({
@@ -966,8 +966,8 @@ app.post('/api/entradas/produtos', async (req, res) => {
                     const insumo = await tx.insumo.findUnique({ where: { Cod_Insumo: custo.Cod_Insumo } });
                     if (!insumo) throw new Error(`Insumo ${custo.Cod_Insumo} não encontrado.`);
                     
-                    const fatorNoBanco = getFatorConversao(insumo.unidade);
-                    const fatorNaReceita = getFatorConversao(custo.Unidade);
+                    const fatorNoBanco = getFactor(insumo.unidade);
+                    const fatorNaReceita = getFactor(custo.Unidade);
                     
                     // Converte o consumo da unidade da receita para a unidade do estoque
                     const consumoNaUnidadeDoBanco = (totalConsumidoBase * fatorNaReceita) / fatorNoBanco;
@@ -1145,8 +1145,8 @@ app.delete('/api/entradas/produtos/:id', async (req, res) => {
                     const totalConsumidoBase = Number(custo.Qtd_Utilizada || 0) * Number(entrada.Quantidade);
                     const insumo = await tx.insumo.findUnique({ where: { Cod_Insumo: custo.Cod_Insumo } });
                     if (insumo) {
-                        const fatorNoBanco = getFatorConversao(insumo.unidade);
-                        const fatorNaReceita = getFatorConversao(custo.Unidade);
+                        const fatorNoBanco = getFactor(insumo.unidade);
+                        const fatorNaReceita = getFactor(custo.Unidade);
                         const devolucao = (totalConsumidoBase * fatorNaReceita) / fatorNoBanco;
                         
                         await tx.insumo.update({
