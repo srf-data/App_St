@@ -107,8 +107,10 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     setFormErrors({});
 
     try {
-      const response = await fetch('/api/entradas/produtos', {
-        method: 'POST',
+      const url = editingEntrada ? `/api/entradas/produtos/${editingEntrada.id}` : '/api/entradas/produtos';
+      const method = editingEntrada ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           produtoId: entradaProdutoId,
@@ -217,8 +219,10 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
 
     setFormErrors({});
     try {
-      const response = await fetch('/api/entradas/insumos', {
-        method: 'POST',
+      const url = editingEntrada ? `/api/entradas/insumos/${editingEntrada.id}` : '/api/entradas/insumos';
+      const method = editingEntrada ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fornecedor: nomeProduto.trim(),
@@ -712,7 +716,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                     </button>
                   )}
                   <button
-                    onClick={handleSaveProduto}
+                    onClick={handleSaveEntrada}
                     disabled={!isFormValid}
                     className={`flex h-10 items-center justify-center gap-2 rounded-lg px-6 transition-fluid hover-scale shadow-md ${isFormValid ? 'bg-[#36BA6F] cursor-pointer' : 'bg-[rgba(139,139,139,0.2)] cursor-not-allowed'}`}
                   >
