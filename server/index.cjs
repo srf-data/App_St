@@ -17,7 +17,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const unidadesBase = {
+const units = {
     // Volume
     'ml': 1, 'ml.': 1, 'mililitro': 1, 'mililitros': 1,
     'l': 1000, 'litro': 1000, 'litros': 1000,
@@ -29,18 +29,18 @@ const unidadesBase = {
     'un': 1, 'unid': 1, 'unidade': 1, 'unidades': 1
 };
 
-const getFatorConversao = (unit) => {
+const getFactor = (unit) => {
     if (!unit) return 1;
     const u = unit.toLowerCase().trim();
-    return unidadesBase[u] || 1;
+    return units[u] || 1;
 };
 
-const calcularPrecoProporcional = (precoInsumo, unitInsumo, qtdUsada, unitUsada) => {
-    const factorInsumo = getFatorConversao(unitInsumo);
-    const factorUsado = getFatorConversao(unitUsada);
-    const precoPorUnidadeBase = Number(precoInsumo) / factorInsumo;
-    const qtdEmUnidadeBase = Number(qtdUsada) * factorUsado;
-    return qtdEmUnidadeBase * precoPorUnidadeBase;
+const calculatePropCost = (price, unitOrig, qty, unitUsed) => {
+    const fOrig = getFactor(unitOrig);
+    const fUsed = getFactor(unitUsed);
+    const pricePerBase = Number(price) / fOrig;
+    const qtyInBase = Number(qty) * fUsed;
+    return qtyInBase * pricePerBase;
 };
 
 const app = express();
@@ -58,7 +58,7 @@ async function recalcularPrecosProdutos(prismaInstance) {
         let novoCustoTotal = 0;
         for (const c of p.custos) {
             if (c.insumo) {
-                const precoProp = calcularPrecoProporcional(
+                const precoProp = calculatePropCost(
                     c.insumo.Custo_insumo,
                     c.insumo.unidade,
                     c.Qtd_Utilizada,
@@ -210,12 +210,29 @@ app.post('/api/login', async (req, res) => {
             where: { email: email }
         });
 
-        if (!user || user.senha !== password) {
+        if (!user) {
             return res.status(401).json({ 
-                title: 'Credenciais Inválidas', 
-                message: 'E-mail ou senha incorretos. Por favor, tente novamente.' 
+                title: 'E-mail não encontrado', 
+                message: 'O e-mail informado não está cadastrado.' 
             });
         }
+
+        // Try bcrypt first, fallback to plain text for legacy users
+        let isValid = false;
+        if (user.senha.startsWith('$2')) {
+            isValid = await bcrypt.compare(password, user.senha);
+        } else {
+            isValid = user.senha === password;
+        }
+
+        if (!isValid) {
+            return res.status(401).json({ 
+                title: 'Senha Incorreta', 
+                message: 'A senha inserida não corresponde ao e-mail.' 
+            });
+        }
+
+        const token = jwt.sign({ id: user.Cod_Usuario, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
 
         await prisma.usuarios.update({
             where: { Cod_Usuario: user.Cod_Usuario },
@@ -223,6 +240,7 @@ app.post('/api/login', async (req, res) => {
         });
 
         res.json({ 
+            token,
             user: mapUsuarioParaFrontend(user)
         });
     } catch (e) {
@@ -231,22 +249,12 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-const readDB = () => {
-    const data = fs.readFileSync(DB_PATH, 'utf8');
-    return JSON.parse(data);
-};
-
-const writeDB = (data) => {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-};
-
 const getLogoBase64 = () => {
     try {
-        // Use PNG for better email compatibility (Gmail doesn't support SVG base64)
         const logoPath = path.join(__dirname, '..', 'src', 'assets', 'brand-logo-new.png');
         if (!fs.existsSync(logoPath)) {
-             // fallback to SVG if PNG not found (though PNG is preferred)
              const svgPath = path.join(__dirname, '..', 'src', 'assets', 'brand-logo-new.svg');
+             if (!fs.existsSync(svgPath)) return null;
              const svgData = fs.readFileSync(svgPath);
              return `data:image/svg+xml;base64,${svgData.toString('base64')}`;
         }
@@ -260,28 +268,6 @@ const getLogoBase64 = () => {
 
 const otps = new Map();
 
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-    const db = readDB();
-    const user = db.users.find(u => u.email === email);
-
-    if (!user) {
-        return res.status(404).json({ title: 'Usuário não encontrado', message: 'O e-mail informado não está cadastrado.' });
-    }
-
-    const isValid = await bcrypt.compare(password, user.senha);
-    if (!isValid) {
-        return res.status(401).json({ title: 'Senha Incorreta', message: 'A senha inserida não corresponde ao e-mail.' });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-    
-    // Update last access
-    user.ultimoAcc = new Date().toLocaleString('pt-BR');
-    writeDB(db);
-
-    res.json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto, ultimoAcc: user.ultimoAcc } });
-});
 
 // Forgot Password
 app.post('/api/forgot-password', async (req, res) => {
@@ -304,8 +290,8 @@ app.post('/api/forgot-password', async (req, res) => {
             port: process.env.SMTP_PORT || 465,
             secure: true, 
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
         });
 
@@ -313,7 +299,7 @@ app.post('/api/forgot-password', async (req, res) => {
         const html = forgotPasswordTemplate(otp, logoBase64);
 
         await transporter.sendMail({
-            from: '"Studio Solart" <' + process.env.SMTP_USER + '>',
+            from: `"Studio Solart" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Recuperação de Senha - Código de Validação",
             html: html,
@@ -353,13 +339,11 @@ app.post('/api/reset-password', async (req, res) => {
         return res.status(401).json({ message: 'Validação inválida.' });
     }
 
-    const db = readDB();
-    const userIndex = db.users.findIndex(u => u.email === email);
-    if (userIndex === -1) return res.status(404).json({ message: 'Usuário não encontrado.' });
-
     const hashed = await bcrypt.hash(newPassword, 10);
-    db.users[userIndex].senha = hashed;
-    writeDB(db);
+    await prisma.usuarios.update({
+        where: { email: email },
+        data: { senha: hashed }
+    });
 
     otps.delete(email);
     res.json({ message: 'Senha alterada com sucesso!' });
