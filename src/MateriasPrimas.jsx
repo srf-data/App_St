@@ -41,12 +41,13 @@ export default function MateriasPrimas({
   const [historyItem, setHistoryItem] = useState(null);
 
   const fileInputRef = React.useRef(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIsAddModalOpen(false);
-        setEditingItem(null);
+        clearForm();
         setHistoryItem(null);
         setZoomedImage(null);
         setShowDeleteModal(false);
@@ -76,6 +77,8 @@ export default function MateriasPrimas({
   const paginatedInsumos = sortedInsumos.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSaveMateriaPrima = async () => {
+    if (loading) return;
+    setLoading(true);
     const dataToValidate = {
       nome,
       fornecedorId,
@@ -480,7 +483,7 @@ export default function MateriasPrimas({
       {(isAddModalOpen || editingItem) && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 anim-fade-in"
-          onMouseDown={() => { setIsAddModalOpen(false); setEditingItem(null); }}
+          onMouseDown={() => { setIsAddModalOpen(false); clearForm(); }}
         >
           <div 
             className="relative flex w-full max-w-[600px] flex-col gap-5 rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto table-scrollbar text-left"

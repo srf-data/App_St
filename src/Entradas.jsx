@@ -27,6 +27,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const [entradaProdutoQtde, setEntradaProdutoQtde] = useState('');
   const [entradaProdutoDesconto, setEntradaProdutoDesconto] = useState('');
   const [entradaInsumoDesconto, setEntradaInsumoDesconto] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const clearForm = () => {
     setNomeProduto('');
@@ -48,7 +49,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIsAddModalOpen(false);
-        setEditingEntrada(null);
+        clearForm();
         setShowDeleteModal(false);
       }
     };
@@ -83,6 +84,8 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const paginatedEntradas = filteredEntradas.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSaveEntradaProduto = async () => {
+    if (loading) return;
+    setLoading(true);
     const dataToValidate = {
       qtde: entradaProdutoQtde,
       desconto: entradaProdutoDesconto || 0,
@@ -131,6 +134,8 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     } catch (error) {
       console.error(error);
       setNotification({ title: 'Erro na Produção', message: cleanNotificationMessage(error.message), type: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -398,7 +403,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
       {(isAddModalOpen || editingEntrada) && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in"
-          onMouseDown={() => { setIsAddModalOpen(false); setEditingEntrada(null); }}
+          onMouseDown={() => { setIsAddModalOpen(false); clearForm(); }}
         >
           <div
             className="relative flex w-full max-w-[850px] flex-col rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl max-h-[95vh] overflow-y-auto table-scrollbar text-left animate-in zoom-in-95 duration-300"

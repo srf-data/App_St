@@ -9,13 +9,14 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteAction, setDeleteAction] = useState(null);
 
+  const [loading, setLoading] = useState(false);
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIsAddModalOpen(false);
-        setEditingSaida(null);
+        clearForm();
         setShowDeleteModal(false);
       }
     };
@@ -106,7 +107,6 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     }
   };
 
-  const [loading, setLoading] = useState(false);
 
   const handleSaveSaida = async () => {
     if (loading) return;
@@ -391,7 +391,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
       {isAddModalOpen && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 text-left"
-          onMouseDown={() => setIsAddModalOpen(false)}
+          onMouseDown={() => { setIsAddModalOpen(false); clearForm(); }}
         >
           <div 
             className="relative flex w-full max-w-[500px] flex-col gap-5 rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300"

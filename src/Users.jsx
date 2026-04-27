@@ -90,6 +90,7 @@ export default function Users({ onLogout, currentUser }) {
   const [formErrors, setFormErrors] = useState({});
   const [editingUser, setEditingUser] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const [produtosList, setProdutosList] = useState([]);
   const [insumosList, setInsumosList] = useState([]);
@@ -113,13 +114,12 @@ export default function Users({ onLogout, currentUser }) {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIsAddingUser(false);
-        setEditingUser(null);
-        setShowDeleteConfirm(false);
         setIsAddingEntrada(false);
         setIsAddingProduto(false);
         setIsAddingMateriaPrima(false);
         setIsAddingFornecedor(false);
         setIsAddingSaida(false);
+        clearForm();
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -161,10 +161,10 @@ export default function Users({ onLogout, currentUser }) {
     }
   };
 
-  const [loading, setLoading] = useState(false);
 
   const handleSaveUser = async () => {
     if (loading) return;
+    setLoading(true);
     const dataToValidate = {
       nome: newNome,
       email: newEmail,
@@ -212,7 +212,6 @@ export default function Users({ onLogout, currentUser }) {
         throw new Error(errorData.error || 'Erro ao salvar usuário.');
       }
       
-      setLoading(true);
       await fetchUsuarios();
       setNotification({ 
         title: 'Sucesso!', 

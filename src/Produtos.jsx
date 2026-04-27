@@ -12,12 +12,13 @@ export default function Produtos({
   const [productToDelete, setProductToDelete] = useState(null);
   const [insumoIndexToDelete, setInsumoIndexToDelete] = useState(null);
 
+  const [loading, setLoading] = useState(false);
+  
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIsAddModalOpen(false);
-        setEditingProduto(null);
-        setSelectedProduto(null);
+        clearForm();
         setShowDeleteModal(false);
       }
     };
@@ -307,6 +308,8 @@ export default function Produtos({
   };
 
   const handleSaveProduto = async () => {
+    if (loading) return;
+    setLoading(true);
     const dataToValidate = {
       nome: nomeProduto,
       qtd: qtdeInicial,
@@ -710,7 +713,7 @@ export default function Produtos({
       {(isAddModalOpen || editingProduto) && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 text-left"
-          onMouseDown={() => { setIsAddModalOpen(false); setEditingProduto(null); setNomeProduto(''); }}
+          onMouseDown={() => { setIsAddModalOpen(false); clearForm(); }}
         >
           <div 
             className="relative flex w-full max-w-[700px] flex-col gap-4 rounded-lg border border-[#F0F0F3] bg-white p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-y-auto table-scrollbar"
