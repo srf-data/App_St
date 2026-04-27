@@ -596,7 +596,7 @@ export default function Users({ onLogout, currentUser }) {
                   <div className="w-[75px] text-center">Foto</div>
                   <div className="flex-1 w-[auto] max-w-none text-left px-4">Nome</div>
                   <div className="flex-1 w-[auto] max-w-none text-left px-4">E-mail</div>
-                  <div className="w-[140px] text-center">Senha</div>
+                  <div className="w-[120px] text-center">Senha</div>
                   <div className="w-[180px] text-center">Data de Cadastro</div>
                   <div className="w-[180px] text-center">Último Acesso</div>
                   <div className="w-[60px] text-center">Ações</div>
@@ -648,9 +648,9 @@ export default function Users({ onLogout, currentUser }) {
                           {formErrors.email && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.email}</p>}
                         </div>
 
-                        <div className="w-[140px]">
-                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Senha</label>
-                          <input type="text" placeholder="Senha" value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                        <div className="w-[120px]">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Nova Senha</label>
+                          <input type="password" placeholder="Senha" value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
                           {formErrors.senha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.senha}</p>}
                         </div>
                       </div>
@@ -671,9 +671,9 @@ export default function Users({ onLogout, currentUser }) {
                           {formErrors.confirmEmail && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.confirmEmail}</p>}
                         </div>
 
-                        <div className="w-[140px]">
+                        <div className="w-[120px]">
                           <label className="block text-[10px] font-medium text-[#606060] mb-2 ml-1 uppercase text-center opacity-70">Confirmar Senha</label>
-                          <input type="text" placeholder="Confirmar Senha" value={newConfirmSenha} onChange={e => setNewConfirmSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmSenha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          <input type="password" placeholder="Confirmar Senha" value={newConfirmSenha} onChange={e => setNewConfirmSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.confirmSenha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
                           {formErrors.confirmSenha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.confirmSenha}</p>}
                         </div>
                       </div>
@@ -728,7 +728,7 @@ export default function Users({ onLogout, currentUser }) {
                       </div>
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 text-[#0D0D0D] truncate">{user.name || user.nome || '-'}</div>
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{user.email || '-'}</div>
-                      <div className="w-[140px] text-center">{user.senha || '-'}</div>
+                      <div className="w-[120px] text-center font-mono text-[10px] tracking-widest opacity-40">••••••••</div>
                       <div className="w-[180px] text-center">{user.dataCad || '-'}</div>
                       <div className="w-[180px] text-center">{user.ultimoAcc || '-'}</div>
                       <div className="w-[60px] flex justify-center">
