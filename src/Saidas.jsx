@@ -32,8 +32,21 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
   const [status, setStatus] = useState('pendente');
 
   const [selectedInsumoId, setSelectedInsumoId] = useState('');
-  const [insumoQtde, setInsumoQtde] = useState('1');
+  const [insumoQuantidade, setInsumoQuantidade] = useState('');
   const [insumoUnidade, setInsumoUnidade] = useState('');
+
+  const clearForm = () => {
+    setCliente('');
+    setProdutoId('');
+    setQuantidade('');
+    setStatus('pendente');
+    setValorUnitario('');
+    setDesconto('0');
+    setSelectedInsumoId('');
+    setInsumoQuantidade('');
+    setInsumoUnidade('');
+    setEditingSaida(null);
+  };
 
   useEffect(() => {
     if (produtoId && quantidade) {
@@ -381,7 +394,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
               <h3 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">
                 {editingSaida ? 'Editar Registro / Saída' : 'Adicionar Nova Saída'}
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid hover:rotate-90">
+              <button onClick={() => { setIsAddModalOpen(false); clearForm(); }} className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid hover:rotate-90">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>

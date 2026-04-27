@@ -112,13 +112,23 @@ export default function Fornecedores({
       setTimeout(() => setNotification(null), 3000);
     }
 
-    // Reset
     setRazaoSocial('');
     setFantasia('');
     setCnpj('');
     setCidade('');
     setEstado('');
     setContato('');
+  };
+
+  const clearForm = () => {
+    setRazaoSocial('');
+    setFantasia('');
+    setCnpj('');
+    setCidade('');
+    setEstado('');
+    setContato('');
+    setEditingItem(null);
+    setFormErrors({});
   };
 
   const handleDeleteFornecedor = (forn) => {
@@ -316,7 +326,7 @@ export default function Fornecedores({
                    {editingItem ? 'Editar Fornecedor' : 'Cadastrar Fornecedor'}
                 </h3>
               </div>
-              <button onClick={() => { setIsAddModalOpen(false); setEditingItem(null); }} className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid cursor-pointer hover:rotate-90">
+              <button onClick={() => { setIsAddModalOpen(false); clearForm(); }} className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid cursor-pointer hover:rotate-90">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>

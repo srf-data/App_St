@@ -28,6 +28,22 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const [entradaProdutoDesconto, setEntradaProdutoDesconto] = useState('');
   const [entradaInsumoDesconto, setEntradaInsumoDesconto] = useState('');
 
+  const clearForm = () => {
+    setNomeProduto('');
+    setInsumosAdicionados([]);
+    setCurInsumoNome('');
+    setCurInsumoFornecedor('');
+    setCurInsumoQtde('');
+    setCurInsumoValor('');
+    setCurInsumoTamanho('1');
+    setEntradaProdutoId('');
+    setEntradaProdutoQtde('');
+    setEntradaProdutoDesconto('');
+    setEntradaInsumoDesconto('');
+    setEditingEntrada(null);
+    setFormErrors({});
+  };
+
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -403,9 +419,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                 <button
                   onClick={() => {
                     setIsAddModalOpen(false);
-                    setEditingEntrada(null);
-                    setNomeProduto('');
-                    setInsumosAdicionados([]);
+                    clearForm();
                   }}
                   className="flex size-8 items-center justify-center rounded-full text-[#606060] transition-fluid hover:bg-gray-100 hover:rotate-90"
                 >

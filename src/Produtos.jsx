@@ -385,6 +385,18 @@ export default function Produtos({
     setLucroPorcentagem('120');
   };
 
+  const clearForm = () => {
+    setNomeProduto(''); 
+    setQtdeInicial('0'); 
+    setInsumosAdicionados([]);
+    setPrecoVenda('0');
+    setComissaoPorcentagem('0');
+    setLucroPorcentagem('120');
+    setEditingProduto(null);
+    setSelectedProduto(null);
+    setFormErrors({});
+  };
+
   const handleDeleteProduct = (produto) => {
     setProductToDelete(produto);
     setShowDeleteModal(true);
@@ -702,21 +714,16 @@ export default function Produtos({
             onMouseDown={e => e.stopPropagation()}
           >
             
-
-
-            <div className="flex h-[50px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
+            <div className="flex h-[40px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
               <div className="flex items-center gap-2">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[rgba(248,73,16,0.1)] text-[#F84910]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20v-8m0 0V4m0 8h8m-8 0H4"></path></svg>
+                <div className="flex size-9 items-center justify-center rounded-lg bg-[rgba(248,73,16,0.1)] text-[#F84910]">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 </div>
                 <h3 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">
-                   {editingProduto ? 'Editar Produto' : 'Adicionar Novo Produto'}
+                   {editingProduto ? 'Editar Produto' : 'Cadastrar Produto'}
                 </h3>
               </div>
-              <button 
-                onClick={() => { setIsAddModalOpen(false); setEditingProduto(null); setNomeProduto(''); }}
-                className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid hover:rotate-90 cursor-pointer"
-              >
+              <button onClick={() => { setIsAddModalOpen(false); clearForm(); }} className="flex size-8 items-center justify-center rounded-full text-[#606060] hover:bg-gray-100 transition-fluid cursor-pointer hover:rotate-90">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>

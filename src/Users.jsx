@@ -227,6 +227,12 @@ export default function Users({ onLogout, currentUser }) {
     setNewNome(''); setNewEmail(''); setNewSenha(''); setNewConfirmEmail(''); setNewConfirmSenha(''); setNewImage(null); setImagePreview(null);
   };
 
+  const clearForm = () => {
+    setNewNome(''); setNewEmail(''); setNewSenha(''); setNewConfirmEmail(''); setNewConfirmSenha(''); setNewImage(null); setImagePreview(null);
+    setEditingUser(null);
+    setFormErrors({});
+  };
+
   const handleDeleteUser = (user) => {
     setEditingUser(user);
     setNewNome(user.nome); 
@@ -694,9 +700,7 @@ export default function Users({ onLogout, currentUser }) {
                           <button
                             onClick={() => {
                               setIsAddingUser(false);
-                              setEditingUser(null);
-                              setFormErrors({});
-                              setNewNome(''); setNewEmail(''); setNewSenha(''); setNewConfirmEmail(''); setNewConfirmSenha(''); setNewImage(null); setImagePreview(null);
+                              clearForm();
                             }}
                             className="font-inter text-sm font-medium text-[#606060] hover:text-[#0D0D0D] transition-colors mr-2 cursor-pointer"
                           >

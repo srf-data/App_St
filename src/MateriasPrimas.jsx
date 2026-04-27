@@ -158,6 +158,12 @@ export default function MateriasPrimas({
     setNome(''); setFornecedorId(''); setUnidade(''); setCusto(''); setEstoque(''); setTamanhoEmbalagem('1'); setImagem(null); setImagePreview(null);
   };
 
+  const clearForm = () => {
+    setNome(''); setFornecedorId(''); setUnidade(''); setCusto(''); setEstoque(''); setTamanhoEmbalagem('1'); setImagem(null); setImagePreview(null);
+    setEditingItem(null);
+    setFormErrors({});
+  };
+
   const handleDeleteItem = (item) => {
     setItemToDelete(item);
     setShowDeleteModal(true);
