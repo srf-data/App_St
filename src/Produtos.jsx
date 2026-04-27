@@ -477,7 +477,7 @@ export default function Produtos({
         </div>
       )}
 
-      <div className="min-w-[1020px] flex flex-col gap-2.5">
+      <div className="min-w-[1120px] flex flex-col gap-2.5">
         {/* Table Header */}
         <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4 font-inter text-xs font-medium text-[#606060]">
           <div className="w-[80px] text-center">Código</div>
@@ -486,6 +486,7 @@ export default function Produtos({
           <div className="w-[130px] text-center">Quant. Cadastrada</div>
           <div className="w-[110px] text-center">Custo Prod.</div>
           <div className="w-[100px] text-center">Preço Venda</div>
+          <div className="w-[100px] text-center">Comissão (R$)</div>
           <div className="w-[100px] text-center">Lucro (R$)</div>
           <div className="w-[80px] text-center">Ações</div>
         </div>
@@ -546,6 +547,17 @@ export default function Produtos({
                   })()}
                 </div>
                 <div className="w-[100px] text-center text-[#36BA6F] font-semibold">{produto.venda || '-'}</div>
+                <div className="w-[100px] text-center text-orange-500 font-medium">
+                    {(() => {
+                      const cp = getDynamicCostNum(produto);
+                      const rawVenda = String(produto.venda || '0');
+                      const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+                      const pv = produto.vendaNum || parsedVenda;
+                      const comPct = produto.comissaoPorcentagem || 0;
+                      const comVal = (pv - cp) * (comPct / 100);
+                      return <span>R$ {comVal.toFixed(2).replace('.', ',')}</span>;
+                    })()}
+                </div>
                 <div className="w-[100px] text-center">
                     {(() => {
                       const cp = getDynamicCostNum(produto);
