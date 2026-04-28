@@ -144,7 +144,7 @@ export default function Users({ onLogout, currentUser }) {
         return;
       }
       
-      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      const MAX_SIZE = 10 * 1024 * 1024; 
       if (file.size > MAX_SIZE) {
         setNotification({ 
           title: 'Arquivo Muito Grande', 
@@ -415,13 +415,13 @@ export default function Users({ onLogout, currentUser }) {
   ];
   return (
     <div className="flex min-h-screen bg-[#FDFDFE] md:bg-white overflow-hidden">
-      {/* Transparent Spacer to keep layout flow */}
+      {}
       <div className={`shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-[270px] max-[860px]:w-[88px]' : 'w-[88px]'}`} />
 
-      {/* Sidebar */}
+      {}
       <aside className={`fixed top-0 left-0 z-50 flex h-full flex-col justify-between border-r border-[#F0F0F3] bg-white py-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[270px] px-6 max-[860px]:shadow-2xl' : 'w-[88px] px-4'}`}>
 
-        {/* Floating Toggle Arrow (on aside, outside overflow-hidden) */}
+        {}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{ WebkitTapHighlightColor: 'transparent', outline: 'none' }}
@@ -633,7 +633,7 @@ export default function Users({ onLogout, currentUser }) {
 
 
                     <div className="flex flex-col gap-6">
-                      {/* Primeira Linha: Nome, E-mail, Senha */}
+                      {}
                       <div className="flex w-full items-start justify-between px-2 gap-4">
                         <div className="w-[80px]" />
                         <div className="w-[75px] flex flex-col items-center">
@@ -667,7 +667,7 @@ export default function Users({ onLogout, currentUser }) {
                         </div>
                       </div>
 
-                      {/* Segunda Linha: Confirmações */}
+                      {}
                       <div className="flex w-full items-start justify-between px-2 gap-4">
                         <div className="w-[80px]" />
                         <div className="w-[75px]" />

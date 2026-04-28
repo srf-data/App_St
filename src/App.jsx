@@ -109,7 +109,7 @@ function App() {
           setIsLoggedIn(true);
           localStorage.setItem('solart_token', data.token);
           localStorage.setItem('solart_email', username);
-          // Don't save password for security, just use the token/session
+          
         } else {
           setNotification({ title: data.title || 'Erro', message: data.message || 'Verifique suas credenciais.', type: 'error' });
         }
@@ -176,12 +176,12 @@ function App() {
     <main className="min-h-screen bg-[#FFF] p-4 md:p-5 flex items-center justify-center">
       <section className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-[1448px] gap-4 min-[1161px]:grid-cols-[1.14fr_1fr] md:gap-5">
         <div className="relative hidden overflow-hidden rounded-2xl bg-white shadow-[0_4px_30px_rgba(0,0,0,0.03)] md:block h-[400px] min-[1161px]:h-full" aria-hidden="true">
-          {/* Background Images and Gradients */}
+          {}
           <div className="absolute inset-0 opacity-80 pointer-events-none">
             <img src={bgImageLogin} alt="" className="h-full w-full object-cover scaling-animation" />
           </div>
 
-          {/* Decorative Vectors from Figma Frame 57 - Pinned to bottom */}
+          {}
           <div className="absolute bottom-0 left-[-2%] w-[114%] pointer-events-none z-10 leading-[0]">
             <img src={loginVectors} alt="" className="w-full h-auto object-contain" />
           </div>
@@ -379,11 +379,11 @@ function App() {
         </div>
       </section>
 
-      {/* MODAL ESQUECEU A SENHA */}
+      {}
       {isForgotModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px]">
           <div className="relative flex w-full max-w-[500px] flex-col items-center gap-8 rounded-lg border border-[#F0F0F3] bg-white p-8 shadow-2xl">
-            {/* Close Button */}
+            {}
             <button 
               onClick={() => { setIsForgotModalOpen(false); setOtpSent(false); }}
               className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full text-[#606060] transition hover:bg-gray-100"
@@ -394,7 +394,7 @@ function App() {
               </svg>
             </button>
 
-            {/* Email Icon / Banner */}
+            {}
             <div className={`flex size-[54px] items-center justify-center rounded-full ${otpSent ? 'bg-[rgba(54,186,111,0.1)] text-[#36BA6F]' : 'bg-[rgba(248,73,16,0.1)] text-[#F84910]'}`}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 {otpSent ? <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path> : <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>}
