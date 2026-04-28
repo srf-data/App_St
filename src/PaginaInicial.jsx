@@ -196,19 +196,30 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
 
     if (range === 'Dia' || range === 'CustomDay') {
       const labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'];
-      const entTotal = finalEntradas.reduce((s, i) => s + getVal(i), 0);
-      const saiTotal = finalSaidas.reduce((s, i) => {
-        if (chartTypeFilter === 'insumos') {
-          return s + (i.fornecedor === 'Produção Própria' ? getVal(i) : getInsumoManualExitCost(i));
-        }
-        return s + getVal(i);
-      }, 0);
+      const result = labels.map(l => ({ name: l, entradas: 0, saidas: 0 }));
+
+      const getSlotIdx = (horaStr) => {
+        if (!horaStr) return -1;
+        const h = parseInt(horaStr.split(':')[0]);
+        if (h < 8) return 0;
+        if (h >= 20) return 6;
+        return Math.floor((h - 8) / 2);
+      };
+
+      finalEntradas.forEach(e => {
+        const idx = getSlotIdx(e.hora);
+        if (idx !== -1) result[idx].entradas += getVal(e);
+      });
+
+      finalSaidas.forEach(s => {
+        const idx = getSlotIdx(s.hora);
+        const val = (chartTypeFilter === 'insumos') 
+          ? (s.fornecedor === 'Produção Própria' ? getVal(s) : getInsumoManualExitCost(s))
+          : getVal(s);
+        if (idx !== -1) result[idx].saidas += val;
+      });
       
-      return labels.map((l, i) => ({
-        name: l,
-        entradas: i === 3 ? entTotal : 0,
-        saidas: i === 4 ? saiTotal : 0
-      }));
+      return result;
     }
 
     if (range === 'Semana') {

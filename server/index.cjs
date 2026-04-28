@@ -115,7 +115,8 @@ const mapSaidaProdutoParaFrontend = (s) => ({
     total: s.Total ? `R$ ${Number(s.Total).toFixed(2).replace('.', ',')}` : 'R$ 0,00',
     totalNum: Number(s.Total || 0),
     status: s.Status || 'pendente',
-    data: new Date(s.DtSaida).toLocaleDateString('pt-BR')
+    data: new Date(s.DtSaida).toLocaleDateString('pt-BR'),
+    hora: new Date(s.DtSaida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 });
 
 const mapSaidaInsumoParaFrontend = (s) => ({
@@ -124,7 +125,8 @@ const mapSaidaInsumoParaFrontend = (s) => ({
     nome: s.Nome_Insumo || '',
     qtde: Number(s.Quantidade || 0),
     status: s.Status || 'saída',
-    data: new Date(s.DtSaida).toLocaleDateString('pt-BR')
+    data: new Date(s.DtSaida).toLocaleDateString('pt-BR'),
+    hora: new Date(s.DtSaida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 });
 
 const mapUsuarioParaFrontend = (u) => ({
@@ -980,6 +982,7 @@ const mapEntradaProdutoParaFrontend = (e) => ({
     total: Number(e.Total || 0).toFixed(2).replace('.', ','),
     emissao: e.DtEmissao.toLocaleDateString('pt-BR'),
     entrada: e.DtEntrada.toLocaleDateString('pt-BR'),
+    hora: e.DtEntrada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     cadastro: e.DtCadastro.toLocaleDateString('pt-BR'),
     status: 'concluida'
 });
@@ -996,6 +999,7 @@ const mapEntradaInsumoParaFrontend = (e) => ({
     total: Number(e.Total || 0).toFixed(2).replace('.', ','),
     emissao: e.DtEmissao.toLocaleDateString('pt-BR'),
     entrada: e.DtEntrada.toLocaleDateString('pt-BR'),
+    hora: e.DtEntrada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     cadastro: e.DtCadastro.toLocaleDateString('pt-BR'),
     status: 'concluida'
 });
