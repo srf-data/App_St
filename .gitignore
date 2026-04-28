@@ -29,3 +29,8 @@ dist-ssr
 *.sw?
 
 /src/generated/prisma
+db.json
+error_debug.json
+error_log.txt
+server/error_log.txt
+server/error_debug.json

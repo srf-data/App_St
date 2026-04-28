@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
@@ -135,9 +136,52 @@ const mapUsuarioParaFrontend = (u) => ({
     ultimoAcc: u.Ultimo_Acesso ? new Date(u.Ultimo_Acesso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Nunca'
 });
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Configuração de CORS Restrito
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3005',
+    'http://localhost:3000',
+    process.env.FRONTEND_URL // Permitir URL de produção via .env
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(new Error('CORS não permitido para esta origem'), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true
+}));
+
+// Rate Limiters
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 200, // Limite de 200 requisições por IP
+    message: { error: 'Muitas requisições deste IP. Tente novamente em 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 10, // Limite rigoroso de 10 tentativas por hora (login/senha)
+    message: { error: 'Muitas tentativas de acesso. Tente novamente em uma hora.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Limite de Body Parser reduzido para 10MB (suficiente para fotos de perfil)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Aplicar Rate Limits
+app.use('/api/', globalLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/forgot-password', authLimiter);
+app.use('/api/reset-password', authLimiter);
+app.use('/api/verify-otp', authLimiter);
 
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
@@ -145,15 +189,26 @@ app.use((req, res, next) => {
 });
 
 const logError = (err, req) => {
+    // Sanitização simples: não logar o body se houver campos sensíveis
+    const safeBody = req.body ? { ...req.body } : {};
+    if (safeBody.senha) safeBody.senha = '[REDACTED]';
+    if (safeBody.password) safeBody.password = '[REDACTED]';
+    if (safeBody.newPassword) safeBody.newPassword = '[REDACTED]';
+    if (safeBody.foto) safeBody.foto = `[IMAGE DATA: ${safeBody.foto.length} chars]`;
+
     const logEntry = `[${new Date().toISOString()}] ERROR: ${err.message}\n` +
                      `Method: ${req.method}\n` +
                      `URL: ${req.url}\n` +
-                     `Body: ${JSON.stringify(req.body)}\n` +
+                     `Body: ${JSON.stringify(safeBody)}\n` +
                      `Stack: ${err.stack}\n` +
                      `-----------------------------------\n`;
-    fs.appendFileSync(path.join(__dirname, 'error_log.txt'), logEntry);
+    try {
+        fs.appendFileSync(path.join(__dirname, 'error_log.txt'), logEntry);
+    } catch (e) {
+        console.error('Falha ao gravar no log:', e.message);
+    }
     console.error('--- ERRO DETECTADO ---');
-    console.error(err);
+    console.error(err.message);
 };
 
 app.get('/api/status', async (req, res) => {
@@ -1118,24 +1173,9 @@ app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
 
         res.json(resultados);
     } catch (e) {
-        console.error('ERRO DETALHADO POST Entradas Insumos:', e);
-        const errorInfo = {
-            message: e.message,
-            stack: e.stack,
-            code: e.code,
-            meta: e.meta,
-            body: req.body,
-            timestamp: new Date().toISOString()
-        };
-        try {
-            require('fs').writeFileSync('error_debug.json', JSON.stringify(errorInfo, null, 2));
-        } catch (fsErr) {
-            console.error('Falha ao escrever log de erro:', fsErr);
-        }
         res.status(500).json({ 
             error: 'Erro ao registrar entrada de insumos.',
-            details: e.message,
-            code: e.code
+            details: e.message
         });
     }
 });
