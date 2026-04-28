@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 import { materialSchema, formatZodError } from './utils/validators';
+import { apiFetch } from './utils/api';
+
 
 export default function MateriasPrimas({ 
   fetchInsumos,
@@ -120,9 +122,8 @@ export default function MateriasPrimas({
 
     try {
       if (editingItem) {
-        const res = await fetch(`/api/insumos/${editingItem.id}`, {
+        const res = await apiFetch(`/api/insumos/${editingItem.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -136,9 +137,8 @@ export default function MateriasPrimas({
           setNotification({ title: 'Erro', message: errorData.error || res.statusText, type: 'error' });
         }
       } else {
-        const res = await fetch('/api/insumos', {
+        const res = await apiFetch('/api/insumos', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -178,7 +178,7 @@ export default function MateriasPrimas({
     if (!itemToDelete) return;
 
     try {
-      const res = await fetch(`/api/insumos/${itemToDelete.id}`, {
+      const res = await apiFetch(`/api/insumos/${itemToDelete.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

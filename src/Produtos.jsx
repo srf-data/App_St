@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 import { productSchema, formatZodError } from './utils/validators';
+import { apiFetch } from './utils/api';
+
 
 export default function Produtos({ 
   fetchProdutos, fetchInsumos, fetchEntradas, produtosList, setProdutosList, insumosList, setInsumosList, fornecedoresList, entradasList, setEntradasList, saidasList, setSaidasList, isAddModalOpen, setIsAddModalOpen, searchQuery, dashboardFilter, clearFilter, setNotification 
@@ -345,8 +347,8 @@ export default function Produtos({
     try {
       if (editingProduto) {
         console.log("[DEBUG] Enviando Payload PUT Produto:", payload);
-        const res = await fetch(`/api/produtos/${editingProduto.id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        const res = await apiFetch(`/api/produtos/${editingProduto.id}`, {
+          method: 'PUT', body: JSON.stringify(payload)
         });
         if (!res.ok) {
            const errBody = await res.json().catch(()=>({}));
@@ -360,8 +362,8 @@ export default function Produtos({
         setEditingProduto(null);
         setIsAddModalOpen(false);
       } else {
-        const res = await fetch('/api/produtos', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        const res = await apiFetch('/api/produtos', {
+          method: 'POST', body: JSON.stringify(payload)
         });
         if (!res.ok) {
            const errBody = await res.json().catch(()=>({}));
@@ -412,7 +414,7 @@ export default function Produtos({
     if (!productToDelete) return;
     
     try {
-      const res = await fetch(`/api/produtos/${productToDelete.id}`, {
+      const res = await apiFetch(`/api/produtos/${productToDelete.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

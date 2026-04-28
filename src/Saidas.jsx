@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
+import { apiFetch } from './utils/api';
+
 
 export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, setSaidaInsumosList, produtosList, setProdutosList, insumosList, setInsumosList, fetchSaidas, fetchSaidaInsumos, fetchProdutos, fetchInsumos, isAddModalOpen, setIsAddModalOpen, searchQuery, setNotification }) {
   const [activeTab, setActiveTab] = useState('produtos');
@@ -102,7 +104,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     } else {
       const ins = insumosList.find(i => i.nome === item.nome);
       setSelectedInsumoId(ins ? ins.id : '');
-      setInsumoQtde(item.qtde);
+      setInsumoQuantidade(item.qtde);
       setInsumoUnidade(ins ? ins.unidade : '');
     }
   };
@@ -111,7 +113,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
   const handleSaveSaida = async () => {
     if (loading) return;
     if (activeTab === 'produtos' && (!cliente || !produtoId || !quantidade)) return;
-    if (activeTab === 'insumos' && (!selectedInsumoId || !insumoQtde)) return;
+    if (activeTab === 'insumos' && (!selectedInsumoId || !insumoQuantidade)) return;
     setLoading(true);
 
     try {
@@ -134,9 +136,8 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
           status
         };
 
-        const res = await fetch(`/api/saidas/produtos${editingSaida ? '/' + editingSaida.id : ''}`, {
+        const res = await apiFetch(`/api/saidas/produtos${editingSaida ? '/' + editingSaida.id : ''}`, {
           method: editingSaida ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
@@ -145,7 +146,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
         setNotification({ title: 'Sucesso!', message: `Saída de ${produtoObj?.nome || 'produto'} registrada.`, type: 'success' });
       } else {
         const insumoObj = insumosList.find(i => String(i.id) === String(selectedInsumoId));
-        let realQtde = parseFloat(insumoQtde) || 0;
+        let realQtde = parseFloat(insumoQuantidade) || 0;
         const baseUnit = (insumoObj?.unidade || '').toLowerCase();
         const targetUnit = (insumoUnidade || baseUnit).toLowerCase();
 
@@ -166,9 +167,8 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
           status: 'saída'
         };
 
-        const res = await fetch(`/api/saidas/insumos${editingSaida ? '/' + editingSaida.id : ''}`, {
+        const res = await apiFetch(`/api/saidas/insumos${editingSaida ? '/' + editingSaida.id : ''}`, {
           method: editingSaida ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
 
@@ -196,7 +196,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     if (!deleteAction) return;
     try {
       const endpoint = deleteAction.type === 'produtos' ? 'saidas/produtos' : 'saidas/insumos';
-      const res = await fetch(`/api/${endpoint}/${deleteAction.id}`, {
+      const res = await apiFetch(`/api/${endpoint}/${deleteAction.id}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error("Erro ao excluir saída");
@@ -218,7 +218,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
 
   const isFormValid = activeTab === 'produtos' 
     ? (cliente.trim() !== '' && produtoId !== '' && quantidade !== '')
-    : (selectedInsumoId !== '' && insumoQtde !== '');
+    : (selectedInsumoId !== '' && insumoQuantidade !== '');
 
   return (
     <>
@@ -482,8 +482,8 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                     <input 
                       type="number" 
                       step="any" 
-                      value={insumoQtde} 
-                      onChange={e => setInsumoQtde(e.target.value)} 
+                      value={insumoQuantidade} 
+                      onChange={e => setInsumoQuantidade(e.target.value)} 
                       className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 text-sm" 
                       placeholder="0.00"
                     />

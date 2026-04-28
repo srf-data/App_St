@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { userSchema, formatZodError } from './utils/validators';
+import { apiFetch } from './utils/api';
+
 import PaginaInicial from './PaginaInicial';
 import Produtos from './Produtos';
 import Entradas from './Entradas';
@@ -201,9 +203,8 @@ export default function Users({ onLogout, currentUser }) {
         : '/api/usuarios';
       const method = editingUser ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
@@ -247,7 +248,7 @@ export default function Users({ onLogout, currentUser }) {
   const handleConfirmDelete = async () => {
     if (editingUser) {
       try {
-        const res = await fetch(`/api/usuarios/${editingUser.id}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/usuarios/${editingUser.id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Erro ao remover usuário.');
 
         const isSelfDeletion = editingUser.id === currentUser?.id;
@@ -290,7 +291,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchFornecedores = async () => {
     try {
-      const res = await fetch('/api/fornecedores');
+      const res = await apiFetch('/api/fornecedores');
       if (res.ok) {
         const data = await res.json();
         setFornecedoresList(data);
@@ -302,7 +303,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchInsumos = async () => {
     try {
-      const res = await fetch('/api/insumos');
+      const res = await apiFetch('/api/insumos');
       if (res.ok) {
         const data = await res.json();
         console.log('[DEBUG] Insumos recebidos do servidor:', data.map(i => ({ id: i.id, nome: i.nome, temFoto: !!i.foto, lenFoto: i.foto?.length || 0 })));
@@ -315,7 +316,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchProdutos = async () => {
     try {
-      const res = await fetch('/api/produtos');
+      const res = await apiFetch('/api/produtos');
       if (res.ok) {
         const data = await res.json();
         setProdutosList(data);
@@ -327,7 +328,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchEntradas = async () => {
     try {
-      const res = await fetch('/api/entradas');
+      const res = await apiFetch('/api/entradas');
       if (res.ok) {
         const data = await res.json();
         setEntradasList(data);
@@ -339,7 +340,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchSaidas = async () => {
     try {
-      const res = await fetch('/api/saidas/produtos');
+      const res = await apiFetch('/api/saidas/produtos');
       if (res.ok) {
         const data = await res.json();
         setSaidasList(data);
@@ -351,7 +352,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchSaidaInsumos = async () => {
     try {
-      const res = await fetch('/api/saidas/insumos');
+      const res = await apiFetch('/api/saidas/insumos');
       if (res.ok) {
         const data = await res.json();
         setSaidaInsumosList(data);
@@ -363,7 +364,7 @@ export default function Users({ onLogout, currentUser }) {
 
   const fetchUsuarios = async () => {
     try {
-      const res = await fetch('/api/usuarios');
+      const res = await apiFetch('/api/usuarios');
       if (res.ok) {
         const data = await res.json();
         setUsuariosList(data);

@@ -107,6 +107,7 @@ function App() {
         if (response.ok) {
           setCurrentUser(data.user);
           setIsLoggedIn(true);
+          localStorage.setItem('solart_token', data.token);
           localStorage.setItem('solart_email', username);
           // Don't save password for security, just use the token/session
         } else {
@@ -164,6 +165,7 @@ function App() {
           setCurrentUser(null);
           localStorage.removeItem('solart_isLoggedIn');
           localStorage.removeItem('solart_currentUser');
+          localStorage.removeItem('solart_token');
         }} 
         currentUser={currentUser}
       />

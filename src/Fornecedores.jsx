@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { apiFetch } from './utils/api';
+
 
 export default function Fornecedores({ 
   fetchFornecedores,
@@ -87,9 +89,8 @@ export default function Fornecedores({
 
     try {
       if (editingItem) {
-        const res = await fetch(`/api/fornecedores/${editingItem.id}`, {
+        const res = await apiFetch(`/api/fornecedores/${editingItem.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -99,9 +100,8 @@ export default function Fornecedores({
           if (fetchFornecedores) await fetchFornecedores();
         }
       } else {
-        const res = await fetch('/api/fornecedores', {
+        const res = await apiFetch('/api/fornecedores', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
@@ -145,7 +145,7 @@ export default function Fornecedores({
     if (!fornToDelete) return;
 
     try {
-      const res = await fetch(`/api/fornecedores/${fornToDelete.id}`, {
+      const res = await apiFetch(`/api/fornecedores/${fornToDelete.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

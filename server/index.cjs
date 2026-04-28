@@ -45,7 +45,29 @@ const calculatePropCost = (price, unitOrig, qty, unitUsed) => {
 
 const app = express();
 const PORT = process.env.PORT || 3005;
-const JWT_SECRET = process.env.JWT_SECRET || 'solart_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET || 'solart_secret_key_123_dev_only';
+if (!process.env.JWT_SECRET) {
+    console.warn('WARNING: JWT_SECRET environment variable is not set. Using a default development secret.');
+}
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token de acesso não fornecido.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            console.error('[AUTH] Token inválido:', err.message);
+            return res.status(403).json({ error: 'Token inválido ou expirado.' });
+        }
+        req.user = user;
+        next();
+    });
+};
+
 const DB_PATH = path.join(__dirname, 'db.json');
 
 async function recalcularPrecosProdutos(prismaInstance) {
@@ -143,7 +165,7 @@ app.get('/api/status', async (req, res) => {
     }
 });
 
-app.get('/api/usuarios', async (req, res) => {
+app.get('/api/usuarios', authenticateToken, async (req, res) => {
     try {
         const users = await prisma.usuarios.findMany({ orderBy: { Cod_Usuario: 'asc' } });
         res.json(users.map(mapUsuarioParaFrontend));
@@ -153,7 +175,7 @@ app.get('/api/usuarios', async (req, res) => {
     }
 });
 
-app.post('/api/usuarios', async (req, res) => {
+app.post('/api/usuarios', authenticateToken, async (req, res) => {
     const { nome, email, senha, foto } = req.body;
     try {
         const hashed = await bcrypt.hash(senha, 10);
@@ -173,7 +195,7 @@ app.post('/api/usuarios', async (req, res) => {
     }
 });
 
-app.put('/api/usuarios/:id', async (req, res) => {
+app.put('/api/usuarios/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { nome, email, senha, foto } = req.body;
     try {
@@ -198,7 +220,7 @@ app.put('/api/usuarios/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/usuarios/:id', async (req, res) => {
+app.delete('/api/usuarios/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.usuarios.delete({ where: { Cod_Usuario: Number(id) } });
@@ -223,13 +245,8 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
-        // Try bcrypt first, fallback to plain text for legacy users
-        let isValid = false;
-        if (user.senha.startsWith('$2')) {
-            isValid = await bcrypt.compare(password, user.senha);
-        } else {
-            isValid = user.senha === password;
-        }
+        // Use bcrypt to verify password
+        const isValid = await bcrypt.compare(password, user.senha);
 
         if (!isValid) {
             return res.status(401).json({ 
@@ -364,7 +381,7 @@ const mapFornecedorParaFrontend = (f) => ({
   contato: f.Contato || ''
 });
 
-app.get('/api/fornecedores', async (req, res) => {
+app.get('/api/fornecedores', authenticateToken, async (req, res) => {
     try {
         const fornecedores = await prisma.fornecedores.findMany({ orderBy: { Cod_Fornecedor: 'desc' } });
         res.json(fornecedores.map(mapFornecedorParaFrontend));
@@ -374,7 +391,7 @@ app.get('/api/fornecedores', async (req, res) => {
     }
 });
 
-app.post('/api/fornecedores', async (req, res) => {
+app.post('/api/fornecedores', authenticateToken, async (req, res) => {
     const { razaoSocial, fantasia, cnpj, cidade, estado, contato } = req.body;
     try {
         const cnpjLimpo = cnpj ? cnpj.replace(/\D/g, '') : null;
@@ -397,7 +414,7 @@ app.post('/api/fornecedores', async (req, res) => {
     }
 });
 
-app.put('/api/fornecedores/:id', async (req, res) => {
+app.put('/api/fornecedores/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { razaoSocial, fantasia, cnpj, cidade, estado, contato } = req.body;
     try {
@@ -422,7 +439,7 @@ app.put('/api/fornecedores/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/fornecedores/:id', async (req, res) => {
+app.delete('/api/fornecedores/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.fornecedores.delete({
@@ -455,7 +472,7 @@ const mapInsumoParaFrontend = (i) => {
   };
 };
 
-app.get('/api/insumos', async (req, res) => {
+app.get('/api/insumos', authenticateToken, async (req, res) => {
     try {
         const insumos = await prisma.insumo.findMany({
             include: { fornecedor: true },
@@ -469,7 +486,7 @@ app.get('/api/insumos', async (req, res) => {
     }
 });
 
-app.post('/api/insumos', async (req, res) => {
+app.post('/api/insumos', authenticateToken, async (req, res) => {
     console.log('[POST /api/insumos] Payload recebido:', { ...req.body, foto: req.body.foto ? `(Len: ${req.body.foto.length}, Inicio: ${req.body.foto.substring(0, 50)}...)` : 'vazio' });
     const { nome, unidade, custoUnitario, fornecedorId, estoqueAtual, precoEmbalagem, tamanhoEmbalagem, foto } = req.body;
     
@@ -532,7 +549,7 @@ app.post('/api/insumos', async (req, res) => {
     }
 });
 
-app.put('/api/insumos/:id', async (req, res) => {
+app.put('/api/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     console.log(`[PUT /api/insumos/${id}] Payload recebido:`, { ...req.body, foto: req.body.foto ? `(Len: ${req.body.foto.length}, Inicio: ${req.body.foto.substring(0, 50)}...)` : 'vazio' });
     const { nome, unidade, custoUnitario, fornecedorId, estoqueAtual, precoEmbalagem, tamanhoEmbalagem, foto } = req.body;
@@ -570,7 +587,7 @@ app.put('/api/insumos/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/insumos/:id', async (req, res) => {
+app.delete('/api/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.insumo.delete({
@@ -636,7 +653,7 @@ const mapProdutoParaFrontend = (p) => {
     };
 };
 
-app.get('/api/produtos', async (req, res) => {
+app.get('/api/produtos', authenticateToken, async (req, res) => {
     try {
         const produtos = await prisma.produto.findMany({
             include: { 
@@ -653,7 +670,7 @@ app.get('/api/produtos', async (req, res) => {
     }
 });
 
-app.post('/api/produtos', async (req, res) => {
+app.post('/api/produtos', authenticateToken, async (req, res) => {
     const { nome, qtde, custoProduto, precoVenda, comissaoPorcentagem, insumos } = req.body;
     
     // Conversores seguros para POST
@@ -741,7 +758,7 @@ app.post('/api/produtos', async (req, res) => {
     }
 });
 
-app.put('/api/produtos/:id', async (req, res) => {
+app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     console.log(`[PUT /api/produtos/${id}] BODY RECEBIDO:`, JSON.stringify(req.body));
     
@@ -874,7 +891,7 @@ app.put('/api/produtos/:id', async (req, res) => {
 });
 
 // --- Deletar Produto ---
-app.delete('/api/produtos/:id', async (req, res) => {
+app.delete('/api/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     console.log(`[DELETE] Solicitando exclusão do Produto ID: ${id}`);
     try {
@@ -924,7 +941,7 @@ const mapEntradaInsumoParaFrontend = (e) => ({
     status: 'concluida'
 });
 
-app.get('/api/entradas', async (req, res) => {
+app.get('/api/entradas', authenticateToken, async (req, res) => {
     try {
         const [entradasProd, entradasIns] = await Promise.all([
             prisma.entradaProdutos.findMany({ orderBy: { DtCadastro: 'desc' } }),
@@ -947,7 +964,7 @@ app.get('/api/entradas', async (req, res) => {
 });
 
 // Registrar Produção de Produto (Entrada de Produto Finalizado)
-app.post('/api/entradas/produtos', async (req, res) => {
+app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
     const { produtoId, qtde, desconto } = req.body;
     try {
         const resultado = await prisma.$transaction(async (tx) => {
@@ -1017,7 +1034,7 @@ app.post('/api/entradas/produtos', async (req, res) => {
 });
 
 // Registrar Compra de Insumos (Entrada de Matéria-Prima)
-app.post('/api/entradas/insumos', async (req, res) => {
+app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
     const { fornecedor, insumos, descontoTotal } = req.body;
     console.log('Recebido POST /api/entradas/insumos:', { fornecedor, count: insumos?.length });
     
@@ -1123,7 +1140,7 @@ app.post('/api/entradas/insumos', async (req, res) => {
     }
 });
 // Apagar Entrada de Produto (Reverte produção)
-app.delete('/api/entradas/produtos/:id', async (req, res) => {
+app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.$transaction(async (tx) => {
@@ -1173,7 +1190,7 @@ app.delete('/api/entradas/produtos/:id', async (req, res) => {
 });
 
 // Apagar Entrada de Insumos (Reverte compra)
-app.delete('/api/entradas/insumos/:id', async (req, res) => {
+app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.$transaction(async (tx) => {
@@ -1200,7 +1217,7 @@ app.delete('/api/entradas/insumos/:id', async (req, res) => {
 });
 
 // --- Saídas Endpoints ---
-app.get('/api/saidas/produtos', async (req, res) => {
+app.get('/api/saidas/produtos', authenticateToken, async (req, res) => {
     try {
         const saidas = await prisma.saidaProdutos.findMany({
             include: { produto: true },
@@ -1213,7 +1230,7 @@ app.get('/api/saidas/produtos', async (req, res) => {
     }
 });
 
-app.post('/api/saidas/produtos', async (req, res) => {
+app.post('/api/saidas/produtos', authenticateToken, async (req, res) => {
     const { produtoId, cliente, quantidade, valorUnitario, desconto, total, status } = req.body;
     try {
         const resultado = await prisma.$transaction(async (tx) => {
@@ -1250,7 +1267,7 @@ app.post('/api/saidas/produtos', async (req, res) => {
     }
 });
 
-app.delete('/api/saidas/produtos/:id', async (req, res) => {
+app.delete('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.$transaction(async (tx) => {
@@ -1272,7 +1289,7 @@ app.delete('/api/saidas/produtos/:id', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
-app.put('/api/saidas/produtos/:id', async (req, res) => {
+app.put('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { produtoId, cliente, quantidade, valorUnitario, desconto, total, status } = req.body;
     const cleanId = String(id).replace('P-', '');
@@ -1322,7 +1339,7 @@ app.put('/api/saidas/produtos/:id', async (req, res) => {
     }
 });
 
-app.put('/api/saidas/insumos/:id', async (req, res) => {
+app.put('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { insumoId, quantidade, status } = req.body;
     
@@ -1367,7 +1384,7 @@ app.put('/api/saidas/insumos/:id', async (req, res) => {
     }
 });
 
-app.get('/api/saidas/insumos', async (req, res) => {
+app.get('/api/saidas/insumos', authenticateToken, async (req, res) => {
     try {
         const saidas = await prisma.saidaInsumos.findMany({
             include: { insumo: true },
@@ -1380,7 +1397,7 @@ app.get('/api/saidas/insumos', async (req, res) => {
     }
 });
 
-app.post('/api/saidas/insumos', async (req, res) => {
+app.post('/api/saidas/insumos', authenticateToken, async (req, res) => {
     const { insumoId, quantidade, status } = req.body;
     try {
         const resultado = await prisma.$transaction(async (tx) => {
@@ -1413,7 +1430,7 @@ app.post('/api/saidas/insumos', async (req, res) => {
     }
 });
 
-app.delete('/api/saidas/insumos/:id', async (req, res) => {
+app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
         await prisma.$transaction(async (tx) => {

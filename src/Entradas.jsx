@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { cleanNotificationMessage, formatBRNumber } from './utils/validators';
 import { entrySchema, formatZodError } from './utils/validators';
+import { apiFetch } from './utils/api';
+
 
 export default function Entradas({ entradasList, setEntradasList, produtosList, setProdutosList, insumosList, setInsumosList, fornecedoresList, fetchEntradas, fetchInsumos, fetchProdutos, isAddModalOpen, setIsAddModalOpen, searchQuery, setNotification }) {
   const [activeTab, setActiveTab] = useState('produtos');
@@ -109,9 +111,8 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     try {
       const url = editingEntrada ? `/api/entradas/produtos/${editingEntrada.id}` : '/api/entradas/produtos';
       const method = editingEntrada ? 'PUT' : 'POST';
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           produtoId: entradaProdutoId,
           qtde: entradaProdutoQtde,
@@ -221,9 +222,8 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     try {
       const url = editingEntrada ? `/api/entradas/insumos/${editingEntrada.id}` : '/api/entradas/insumos';
       const method = editingEntrada ? 'PUT' : 'POST';
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fornecedor: nomeProduto.trim(),
           insumos: insumosAdicionados,
