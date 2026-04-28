@@ -1142,10 +1142,11 @@ app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
 // Apagar Entrada de Produto (Reverte produção)
 app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const cleanId = String(id).replace('P-', '');
     try {
         await prisma.$transaction(async (tx) => {
             const entrada = await tx.entradaProdutos.findUnique({
-                where: { Cod_Entrada_Prod: Number(id) }
+                where: { Cod_Entrada_Prod: Number(cleanId) }
             });
 
             if (!entrada) throw new Error("Registro de entrada não encontrado.");
@@ -1180,7 +1181,7 @@ app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => 
             }
 
             // 3. Deletar apenas o registro da entrada
-            await tx.entradaProdutos.delete({ where: { Cod_Entrada_Prod: Number(id) } });
+            await tx.entradaProdutos.delete({ where: { Cod_Entrada_Prod: Number(cleanId) } });
         });
         res.json({ message: 'Entrada de produto cancelada e estoque revertido.' });
     } catch (e) {
@@ -1192,10 +1193,11 @@ app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => 
 // Apagar Entrada de Insumos (Reverte compra)
 app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const cleanId = String(id).replace('I-', '');
     try {
         await prisma.$transaction(async (tx) => {
             const entrada = await tx.entradaInsumos.findUnique({
-                where: { Cod_Entrada_Insumo: Number(id) }
+                where: { Cod_Entrada_Insumo: Number(cleanId) }
             });
 
             if (!entrada) throw new Error("Registro de compra não encontrado.");
@@ -1207,7 +1209,7 @@ app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
             });
 
             // 2. Deletar apenas o registro da entrada
-            await tx.entradaInsumos.delete({ where: { Cod_Entrada_Insumo: Number(id) } });
+            await tx.entradaInsumos.delete({ where: { Cod_Entrada_Insumo: Number(cleanId) } });
         });
         res.json({ message: 'Compra cancelada e estoque ajustado.' });
     } catch (e) {
@@ -1269,9 +1271,10 @@ app.post('/api/saidas/produtos', authenticateToken, async (req, res) => {
 
 app.delete('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const cleanId = String(id).replace('P-', '');
     try {
         await prisma.$transaction(async (tx) => {
-            const saida = await tx.saidaProdutos.findUnique({ where: { Cod_Saida_Prod: Number(id) } });
+            const saida = await tx.saidaProdutos.findUnique({ where: { Cod_Saida_Prod: Number(cleanId) } });
             if (!saida) throw new Error("Saída não encontrada.");
 
             // 1. Reverter Estoque
@@ -1281,7 +1284,7 @@ app.delete('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
             });
 
             // 2. Deletar Registro
-            await tx.saidaProdutos.delete({ where: { Cod_Saida_Prod: Number(id) } });
+            await tx.saidaProdutos.delete({ where: { Cod_Saida_Prod: Number(cleanId) } });
         });
         res.json({ message: 'Saída excluída e estoque revertido.' });
     } catch (e) {
@@ -1342,10 +1345,11 @@ app.put('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
 app.put('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { insumoId, quantidade, status } = req.body;
+    const cleanId = String(id).replace('I-', '');
     
     try {
         const resultado = await prisma.$transaction(async (tx) => {
-            const saidaAntiga = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(id) } });
+            const saidaAntiga = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(cleanId) } });
             if (!saidaAntiga) throw new Error("Registro de saída não encontrado.");
 
             // 1. Reverter estoque antigo
@@ -1366,7 +1370,7 @@ app.put('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
 
             // 4. Atualizar registro
             const saidaAtualizada = await tx.saidaInsumos.update({
-                where: { Cod_Saida_Insumo: Number(id) },
+                where: { Cod_Saida_Insumo: Number(cleanId) },
                 data: {
                     Cod_Insumo: Number(insumoId),
                     Nome_Insumo: insumo.Nome_Insumo,
@@ -1432,9 +1436,10 @@ app.post('/api/saidas/insumos', authenticateToken, async (req, res) => {
 
 app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
+    const cleanId = String(id).replace('I-', '');
     try {
         await prisma.$transaction(async (tx) => {
-            const saida = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(id) } });
+            const saida = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(cleanId) } });
             if (!saida) throw new Error("Saída de insumo não encontrada.");
 
             // 1. Reverter Estoque
@@ -1444,7 +1449,7 @@ app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
             });
 
             // 2. Deletar Registro
-            await tx.saidaInsumos.delete({ where: { Cod_Saida_Insumo: Number(id) } });
+            await tx.saidaInsumos.delete({ where: { Cod_Saida_Insumo: Number(cleanId) } });
         });
         res.json({ message: 'Saída de insumo excluída e estoque revertido.' });
     } catch (e) {
