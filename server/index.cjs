@@ -142,16 +142,19 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3005',
     'http://localhost:3000',
-    process.env.FRONTEND_URL // Permitir URL de produção via .env
+    'https://solart-app.onrender.com',
+    process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            return callback(new Error('CORS não permitido para esta origem'), false);
+        // Permitir se não houver origin (mesmo domínio) ou se estiver na lista
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+            callback(null, true);
+        } else {
+            console.warn(`[CORS] Bloqueado para origem: ${origin}`);
+            callback(new Error('CORS não permitido para esta origem'), false);
         }
-        return callback(null, true);
     },
     credentials: true
 }));
