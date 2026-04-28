@@ -19,14 +19,14 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const units = {
-    
+    // Volume
     'ml': 1, 'ml.': 1, 'mililitro': 1, 'mililitros': 1,
     'l': 1000, 'litro': 1000, 'litros': 1000,
     '100ml': 100,
-    
+    // Massa
     'g': 1, 'grama': 1, 'gramas': 1,
     'kg': 1000, 'quilo': 1000, 'quilos': 1000, 'kilo': 1000,
-    
+    // Unidade
     'un': 1, 'unid': 1, 'unidade': 1, 'unidades': 1
 };
 
@@ -45,7 +45,7 @@ const calculatePropCost = (price, unitOrig, qty, unitUsed) => {
 };
 
 const app = express();
-app.set('trust proxy', 1); 
+app.set('trust proxy', 1); // Necessário para o Render e rate limiting
 const PORT = process.env.PORT || 3005;
 const JWT_SECRET = process.env.JWT_SECRET || 'solart_secret_key_123_dev_only';
 if (!process.env.JWT_SECRET) {
@@ -139,7 +139,7 @@ const mapUsuarioParaFrontend = (u) => ({
     ultimoAcc: u.Ultimo_Acesso ? new Date(u.Ultimo_Acesso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Nunca'
 });
 
-
+// Configuração de CORS Restrito
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3005',
@@ -151,7 +151,7 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        
+        // Permitir se não houver origin, se estiver na lista, se for IP local ou se for Render
         const isLocalIp = origin && (origin.startsWith('http://192.168.') || origin.startsWith('http://10.') || origin.startsWith('http://172.'));
         if (!origin || allowedOrigins.includes(origin) || isLocalIp || origin.endsWith('.onrender.com')) {
             callback(null, true);
@@ -163,28 +163,28 @@ app.use(cors({
     credentials: true
 }));
 
-
+// Rate Limiters
 const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 200, 
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 200, // Limite de 200 requisições por IP
     message: { error: 'Muitas requisições deste IP. Tente novamente em 15 minutos.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
 
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, 
-    max: 10, 
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 10, // Limite rigoroso de 10 tentativas por hora (login/senha)
     message: { error: 'Muitas tentativas de acesso. Tente novamente em uma hora.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-
+// Limite de Body Parser configurado para 10MB (ideal para fotos de produtos sem sobrecarregar o banco)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-
+// Aplicar Rate Limits
 app.use('/api/', globalLimiter);
 app.use('/api/login', authLimiter);
 app.use('/api/forgot-password', authLimiter);
@@ -197,7 +197,7 @@ app.use((req, res, next) => {
 });
 
 const logError = (err, req) => {
-    
+    // Sanitização simples: não logar o body se houver campos sensíveis
     const safeBody = req.body ? { ...req.body } : {};
     if (safeBody.senha) safeBody.senha = '[REDACTED]';
     if (safeBody.password) safeBody.password = '[REDACTED]';
@@ -308,7 +308,7 @@ app.post('/api/login', async (req, res) => {
             });
         }
 
-        
+        // Use bcrypt to verify password
         const isValid = await bcrypt.compare(password, user.senha);
 
         if (!isValid) {
@@ -355,7 +355,7 @@ const getLogoBase64 = () => {
 const otps = new Map();
 
 
-
+// Forgot Password
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
     const user = await prisma.usuarios.findUnique({ where: { email: email } });
@@ -364,11 +364,11 @@ app.post('/api/forgot-password', async (req, res) => {
         return res.status(404).json({ title: 'Erro', message: 'E-mail não encontrado.' });
     }
 
-    
+    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(email, { otp, expires: Date.now() + 15 * 60 * 1000 });
 
-    
+    // Setup Real Gmail SMTP
     try {
         let transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -412,7 +412,7 @@ app.post('/api/verify-otp', (req, res) => {
     }
     if (entry.otp !== otp) return res.status(400).json({ message: 'Código incorreto.' });
 
-    
+    // Mark as verified (optional: use a secure session token instead)
     res.json({ message: 'Código validado com sucesso!' });
 });
 
@@ -592,7 +592,7 @@ app.post('/api/insumos', authenticateToken, async (req, res) => {
             return criado;
         });
 
-        
+        // RECALCULAR PRODUTOS AFETADOS
         try {
             await recalcularPrecosProdutos(prisma);
         } catch (e) {
@@ -636,7 +636,7 @@ app.put('/api/insumos/:id', authenticateToken, async (req, res) => {
             },
             include: { fornecedor: true }
         });
-        
+        // RECALCULAR PRODUTOS AFETADOS
         try {
             await recalcularPrecosProdutos(prisma);
         } catch (e) {
@@ -657,7 +657,7 @@ app.delete('/api/insumos/:id', authenticateToken, async (req, res) => {
             where: { Cod_Insumo: Number(id) }
         });
         
-        
+        // RECALCULAR PRODUTOS AFETADOS
         try {
             await recalcularPrecosProdutos(prisma);
         } catch (e) {
@@ -736,7 +736,7 @@ app.get('/api/produtos', authenticateToken, async (req, res) => {
 app.post('/api/produtos', authenticateToken, async (req, res) => {
     const { nome, qtde, custoProduto, precoVenda, comissaoPorcentagem, insumos } = req.body;
     
-    
+    // Conversores seguros para POST
     const qty = parseFloat(String(qtde).replace(',', '.')) || 0;
     const cost = parseFloat(String(custoProduto).replace(',', '.')) || 0;
     const sale = parseFloat(String(precoVenda).replace(',', '.')) || 0;
@@ -786,7 +786,7 @@ app.post('/api/produtos', authenticateToken, async (req, res) => {
                     }
                 });
 
-                
+                // Abate estoque dos insumos
                 for (const item of (insumos || [])) {
                     const insumoDB = await tx.insumo.findUnique({
                         where: { Cod_Insumo: parseInt(item.id) }
@@ -840,7 +840,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
         }
 
         const resultado = await prisma.$transaction(async (tx) => {
-            
+            // 1. Pegamos o produto e sua receita ATUAL (antes de mudar)
             const produtoAnterior = await tx.produto.findUnique({
                 where: { Cod_Produto: Number(id) },
                 include: { custos: true }
@@ -852,20 +852,20 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
 
             const qtdAnterior = Number(produtoAnterior.Quantidade_Cadastrada || 0);
             
-            
+            // 2. Mapeamos o consumo anterior por insumo (Total consumido = Qtd_Utilizada * Qtd_Produto)
             const consumoAnteriorMap = {};
             produtoAnterior.custos.forEach(c => {
                 const fatorBase = getFactor(c.Unidade);
                 consumoAnteriorMap[c.Cod_Insumo] = (Number(c.Qtd_Utilizada) * qtdAnterior) * fatorBase;
             });
 
-            
-            
+            // 3. Primeiro deletamos a receita antiga de forma explícita
+            // (Isso evita conflitos de chave primária composta [Cod_Produto, Cod_Insumo])
             await tx.custoProduto.deleteMany({
                 where: { Cod_Produto: Number(id) }
             });
 
-            
+            // 4. Atualiza o produto e cria a NOVA receita
             const atualizado = await tx.produto.update({
                 where: { Cod_Produto: Number(id) },
                 data: {
@@ -894,7 +894,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
 
             console.log(`[PUT /api/produtos/${id}] DB_RESULT -> Venda: ${atualizado.Preco_Venda}, Comissao: ${atualizado.Comissao_Porcentagem}`);
 
-            
+            // 5. RECONCILIAÇÃO DE ESTOQUE
             for (const itemNovo of (insumos || [])) {
                 const insumoDB = await tx.insumo.findUnique({
                     where: { Cod_Insumo: Number(itemNovo.id) }
@@ -910,7 +910,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
                     const diferencaParaAbaterEmBase = consumoNovoTotalEmBase - consumoAntigoTotalEmBase;
                     const ajusteNaUnidadeDoBanco = diferencaParaAbaterEmBase / fatorNoBanco;
 
-                    if (Math.abs(ajusteNaUnidadeDoBanco) > 0.00001) { 
+                    if (Math.abs(ajusteNaUnidadeDoBanco) > 0.00001) { // Evita micro-ajustes de float
                         console.log(`[PUT /api/produtos] Reconciliando Insumo ${insumoDB.Nome_Insumo}: ${-ajusteNaUnidadeDoBanco} ${insumoDB.unidade}`);
                         await tx.insumo.update({
                             where: { Cod_Insumo: Number(itemNovo.id) },
@@ -921,7 +921,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
                 }
             }
 
-            
+            // 6. Devolução de insumos removidos
             for (const [codInsumo, consumoAntigoBase] of Object.entries(consumoAnteriorMap)) {
                 if (consumoAntigoBase > 0.00001) {
                     const insumoDB = await tx.insumo.findUnique({ where: { Cod_Insumo: Number(codInsumo) } });
@@ -939,7 +939,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
 
             return atualizado;
         }, {
-            timeout: 15000 
+            timeout: 15000 // Aumenta o timeout para transações mais complexas
         });
 
         res.json(mapProdutoParaFrontend(resultado));
@@ -953,7 +953,7 @@ app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-
+// --- Deletar Produto ---
 app.delete('/api/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     console.log(`[DELETE] Solicitando exclusão do Produto ID: ${id}`);
@@ -969,9 +969,9 @@ app.delete('/api/produtos/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// --- Entradas Endpoints ---
 
-
-
+// Helper to map DB entries to frontend format
 const mapEntradaProdutoParaFrontend = (e) => ({
     id: `P-${e.Cod_Entrada_Prod}`,
     dbId: e.Cod_Entrada_Prod,
@@ -1017,7 +1017,7 @@ app.get('/api/entradas', authenticateToken, async (req, res) => {
             ...entradasProd.map(mapEntradaProdutoParaFrontend),
             ...entradasIns.map(mapEntradaInsumoParaFrontend)
         ].sort((a, b) => {
-            
+            // Sort by ID or Date if possible. Since we want most recent first:
             return b.dbId - a.dbId; 
         });
 
@@ -1028,7 +1028,7 @@ app.get('/api/entradas', authenticateToken, async (req, res) => {
     }
 });
 
-
+// Registrar Produção de Produto (Entrada de Produto Finalizado)
 app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
     const { produtoId, qtde, desconto } = req.body;
     try {
@@ -1046,7 +1046,7 @@ app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
             const subtotal = valorUnitario * qtdeNum;
             const total = Math.max(0, subtotal - descontoNum);
 
-            
+            // 1. Validar e Baixar Insumos do estoque
             for (const custo of produto.custos) {
                 const totalConsumidoBase = Number(custo.Qtd_Utilizada || 0) * qtdeNum;
                 if (totalConsumidoBase > 0) {
@@ -1056,7 +1056,7 @@ app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
                     const fatorNoBanco = getFactor(insumo.unidade);
                     const fatorNaReceita = getFactor(custo.Unidade);
                     
-                    
+                    // Converte o consumo da unidade da receita para a unidade do estoque
                     const consumoNaUnidadeDoBanco = (totalConsumidoBase * fatorNaReceita) / fatorNoBanco;
 
                     if (Number(insumo.Estoque || 0) < consumoNaUnidadeDoBanco) {
@@ -1070,13 +1070,13 @@ app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
                 }
             }
 
-            
+            // 2. Aumentar estoque do Produto
             await tx.produto.update({
                 where: { Cod_Produto: Number(produtoId) },
                 data: { Quantidade_Cadastrada: { increment: qtdeNum } }
             });
 
-            
+            // 3. Criar registro de Entrada
             const entrada = await tx.entradaProdutos.create({
                 data: {
                     Cod_Produto: Number(produtoId),
@@ -1098,7 +1098,7 @@ app.post('/api/entradas/produtos', authenticateToken, async (req, res) => {
     }
 });
 
-
+// Registrar Compra de Insumos (Entrada de Matéria-Prima)
 app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
     const { fornecedor, insumos, descontoTotal } = req.body;
     console.log('Recebido POST /api/entradas/insumos:', { fornecedor, count: insumos?.length });
@@ -1107,7 +1107,7 @@ app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
         const resultados = await prisma.$transaction(async (tx) => {
             const listResultados = [];
             
-            
+            // Calcula total bruto com segurança
             const totalBruto = (insumos || []).reduce((acc, i) => {
                 const v = Number(i.qtde || 0) * Number(i.custoUnitario || 0);
                 return acc + (Number.isNaN(v) || !Number.isFinite(v) ? 0 : v);
@@ -1120,7 +1120,7 @@ app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
                 let insumoDB;
                 const itemId = String(item.id || '');
                 
-                if (itemId && !itemId.startsWith('ext-') && !itemId.startsWith('17')) { 
+                if (itemId && !itemId.startsWith('ext-') && !itemId.startsWith('17')) { // 17 is usually from Date.now() in JS
                     const idNum = parseInt(itemId);
                     if (!Number.isNaN(idNum)) {
                         insumoDB = await tx.insumo.findUnique({ where: { Cod_Insumo: idNum } });
@@ -1189,7 +1189,7 @@ app.post('/api/entradas/insumos', authenticateToken, async (req, res) => {
         });
     }
 });
-
+// Apagar Entrada de Produto (Reverte produção)
 app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const cleanId = String(id).replace('P-', '');
@@ -1201,13 +1201,13 @@ app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => 
 
             if (!entrada) throw new Error("Registro de entrada não encontrado.");
 
-            
+            // 1. Reverter estoque do Produto
             await tx.produto.update({
                 where: { Cod_Produto: entrada.Cod_Produto },
                 data: { Quantidade_Cadastrada: { decrement: Number(entrada.Quantidade) } }
             });
 
-            
+            // 2. Reverter estoque dos Insumos (opcional, dependendo da regra de negócio, mas geralmente produtor quer o insumo de volta se cancela a produção)
             const produto = await tx.produto.findUnique({
                 where: { Cod_Produto: entrada.Cod_Produto },
                 include: { custos: true }
@@ -1230,7 +1230,7 @@ app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => 
                 }
             }
 
-            
+            // 3. Deletar apenas o registro da entrada
             await tx.entradaProdutos.delete({ where: { Cod_Entrada_Prod: Number(cleanId) } });
         });
         res.json({ message: 'Entrada de produto cancelada e estoque revertido.' });
@@ -1240,7 +1240,7 @@ app.delete('/api/entradas/produtos/:id', authenticateToken, async (req, res) => 
     }
 });
 
-
+// Apagar Entrada de Insumos (Reverte compra)
 app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const cleanId = String(id).replace('I-', '');
@@ -1252,13 +1252,13 @@ app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
 
             if (!entrada) throw new Error("Registro de compra não encontrado.");
 
-            
+            // 1. Reverter estoque do Insumo
             await tx.insumo.update({
                 where: { Cod_Insumo: entrada.Cod_Insumo },
                 data: { Estoque: { decrement: Number(entrada.Quantidade) } }
             });
 
-            
+            // 2. Deletar apenas o registro da entrada
             await tx.entradaInsumos.delete({ where: { Cod_Entrada_Insumo: Number(cleanId) } });
         });
         res.json({ message: 'Compra cancelada e estoque ajustado.' });
@@ -1268,7 +1268,7 @@ app.delete('/api/entradas/insumos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-
+// --- Saídas Endpoints ---
 app.get('/api/saidas/produtos', authenticateToken, async (req, res) => {
     try {
         const saidas = await prisma.saidaProdutos.findMany({
@@ -1289,7 +1289,7 @@ app.post('/api/saidas/produtos', authenticateToken, async (req, res) => {
             const prod = await tx.produto.findUnique({ where: { Cod_Produto: Number(produtoId) } });
             if (!prod) throw new Error("Produto não encontrado.");
             
-            
+            // 1. Criar Saída
             const saida = await tx.saidaProdutos.create({
                 data: {
                     Cod_Produto: Number(produtoId),
@@ -1304,7 +1304,7 @@ app.post('/api/saidas/produtos', authenticateToken, async (req, res) => {
                 }
             });
 
-            
+            // 2. Diminuir Estoque do Produto
             await tx.produto.update({
                 where: { Cod_Produto: Number(produtoId) },
                 data: { Quantidade_Cadastrada: { decrement: Number(quantidade) } }
@@ -1327,13 +1327,13 @@ app.delete('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
             const saida = await tx.saidaProdutos.findUnique({ where: { Cod_Saida_Prod: Number(cleanId) } });
             if (!saida) throw new Error("Saída não encontrada.");
 
-            
+            // 1. Reverter Estoque
             await tx.produto.update({
                 where: { Cod_Produto: saida.Cod_Produto },
                 data: { Quantidade_Cadastrada: { increment: Number(saida.Quantidade) } }
             });
 
-            
+            // 2. Deletar Registro
             await tx.saidaProdutos.delete({ where: { Cod_Saida_Prod: Number(cleanId) } });
         });
         res.json({ message: 'Saída excluída e estoque revertido.' });
@@ -1352,23 +1352,23 @@ app.put('/api/saidas/produtos/:id', authenticateToken, async (req, res) => {
             const saidaAntiga = await tx.saidaProdutos.findUnique({ where: { Cod_Saida_Prod: Number(cleanId) } });
             if (!saidaAntiga) throw new Error("Saída não encontrada.");
 
-            
+            // 1. Reverter estoque antigo
             await tx.produto.update({
                 where: { Cod_Produto: saidaAntiga.Cod_Produto },
                 data: { Quantidade_Cadastrada: { increment: Number(saidaAntiga.Quantidade) } }
             });
 
-            
+            // 2. Verificar novo produto (pode ter mudado o produto na edição)
             const prod = await tx.produto.findUnique({ where: { Cod_Produto: Number(produtoId) } });
             if (!prod) throw new Error("Novo produto selecionado não encontrado.");
 
-            
+            // 3. Atualizar estoque com nova quantidade
             await tx.produto.update({
                 where: { Cod_Produto: Number(produtoId) },
                 data: { Quantidade_Cadastrada: { decrement: Number(quantidade) } }
             });
 
-            
+            // 4. Atualizar registro da Saída
             const saidaAtualizada = await tx.saidaProdutos.update({
                 where: { Cod_Saida_Prod: Number(cleanId) },
                 data: {
@@ -1402,23 +1402,23 @@ app.put('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
             const saidaAntiga = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(cleanId) } });
             if (!saidaAntiga) throw new Error("Registro de saída não encontrado.");
 
-            
+            // 1. Reverter estoque antigo
             await tx.insumo.update({
                 where: { Cod_Insumo: saidaAntiga.Cod_Insumo },
                 data: { Estoque: { increment: Number(saidaAntiga.Quantidade) } }
             });
 
-            
+            // 2. Verificar novo insumo
             const insumo = await tx.insumo.findUnique({ where: { Cod_Insumo: Number(insumoId) } });
             if (!insumo) throw new Error("Insumo não encontrado.");
 
-            
+            // 3. Aplicar nova quantidade
             await tx.insumo.update({
                 where: { Cod_Insumo: Number(insumoId) },
                 data: { Estoque: { decrement: Number(quantidade) } }
             });
 
-            
+            // 4. Atualizar registro
             const saidaAtualizada = await tx.saidaInsumos.update({
                 where: { Cod_Saida_Insumo: Number(cleanId) },
                 data: {
@@ -1458,7 +1458,7 @@ app.post('/api/saidas/insumos', authenticateToken, async (req, res) => {
             const insumo = await tx.insumo.findUnique({ where: { Cod_Insumo: Number(insumoId) } });
             if (!insumo) throw new Error("Insumo não encontrado.");
 
-            
+            // 1. Criar Saída
             const saida = await tx.saidaInsumos.create({
                 data: {
                     Cod_Insumo: Number(insumoId),
@@ -1469,7 +1469,7 @@ app.post('/api/saidas/insumos', authenticateToken, async (req, res) => {
                 }
             });
 
-            
+            // 2. Diminuir Estoque do Insumo
             await tx.insumo.update({
                 where: { Cod_Insumo: Number(insumoId) },
                 data: { Estoque: { decrement: Number(quantidade) } }
@@ -1492,13 +1492,13 @@ app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
             const saida = await tx.saidaInsumos.findUnique({ where: { Cod_Saida_Insumo: Number(cleanId) } });
             if (!saida) throw new Error("Saída de insumo não encontrada.");
 
-            
+            // 1. Reverter Estoque
             await tx.insumo.update({
                 where: { Cod_Insumo: saida.Cod_Insumo },
                 data: { Estoque: { increment: Number(saida.Quantidade) } }
             });
 
-            
+            // 2. Deletar Registro
             await tx.saidaInsumos.delete({ where: { Cod_Saida_Insumo: Number(cleanId) } });
         });
         res.json({ message: 'Saída de insumo excluída e estoque revertido.' });
@@ -1508,8 +1508,8 @@ app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-
-
+// Serve static files from the React app
+// Servir arquivos estáticos da pasta dist
 const distPath = fs.existsSync(path.join(__dirname, '../dist')) 
     ? path.join(__dirname, '../dist') 
     : path.join(__dirname, 'dist');
@@ -1521,14 +1521,14 @@ if (!fs.existsSync(distPath)) {
 
 app.use(express.static(distPath));
 
-
-
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
 app.use((req, res) => {
-    
+    // Se for uma rota de API que não foi encontrada, retorna 404 normal
     if (req.url.startsWith('/api/')) {
         return res.status(404).json({ error: `Route ${req.url} not found` });
     }
-    
+    // Caso contrário, serve o index.html (para suporte a SPA routing)
     const indexPath = path.join(distPath, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
@@ -1545,9 +1545,9 @@ app.listen(PORT, '0.0.0.0', async () => {
     } catch (e) {
         console.error('Erro no recálculo inicial:', e);
     }
-    
+    // Keep alive interval to prevent accidental exit
     setInterval(() => {
-        
+        // No-op
     }, 60000);
 });
 

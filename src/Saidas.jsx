@@ -224,7 +224,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
     <>
       <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
       
-      {}
+      {/* Tabs */}
       <div className="flex gap-4 mb-4 border-b border-[#F0F0F3] px-2 mt-2">
         <button 
           onClick={() => setActiveMainTab('produtos')}
@@ -352,7 +352,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
           </>
         )}
 
-        {}
+        {/* Footer Paginação */}
         <div className="flex h-[48px] w-full items-center justify-between border-t border-[#F0F0F3] px-2 pt-2 mt-2">
           <div className="font-inter text-xs font-medium text-[#606060]">
             {activeMainTab === 'produtos' ? filteredSaidas.length : filteredSaidaInsumos.length} registros encontrados. Página {currentPage} de {totalPages}
@@ -387,7 +387,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
         </div>
       </div>
 
-      {}
+      {/* MODAL */}
       {isAddModalOpen && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 text-left"
@@ -549,7 +549,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
       )}
     </div>
 
-      {}
+      {/* CONFIRM DELETE MODAL */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => { setShowDeleteModal(false); setDeleteAction(null); }}>
           <div className="relative flex w-full max-w-[380px] flex-col items-center gap-5 rounded-xl border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300" onMouseDown={e => e.stopPropagation()}>

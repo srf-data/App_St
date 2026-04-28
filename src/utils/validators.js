@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-
+// Helper to format zod error into a simple map { field: message }
 export function formatZodError(error) {
   const errors = {};
   error.issues.forEach((issue) => {
@@ -51,7 +51,9 @@ export const entrySchema = z.object({
   desconto: z.coerce.number().nonnegative('Desconto não pode ser negativo').optional(),
 });
 
-
+/**
+ * Limpa mensagens de erro técnicas do servidor para exibição amigável ao usuário.
+ */
 export function cleanNotificationMessage(msg) {
   if (!msg) return 'Ocorreu um erro inesperado.';
   if (typeof msg !== 'string') {
@@ -67,10 +69,10 @@ export function cleanNotificationMessage(msg) {
     .replace(/Unique constraint failed on the fields: .*/i, 'Já existe um registro com estes dados.')
     .replace(/Record to delete does not exist/i, 'Registro não encontrado.')
     .replace(/Record to update not found/i, 'Registro para atualização não encontrado.')
-    .replace(/\$/g, 'R$') 
+    .replace(/\$/g, 'R$') // Garante que qualquer menção a dólar vire R$
     .trim();
 
-  
+  // Caso a mensagem ainda seja muito técnica ou código bruto
   if (cleaned.length > 250 || cleaned.includes('Prisma') || (cleaned.includes('{') && cleaned.includes('}'))) {
     return 'Falha na operação. Verifique os dados e tente novamente.';
   }
@@ -78,7 +80,9 @@ export function cleanNotificationMessage(msg) {
   return cleaned;
 }
 
-
+/**
+ * Formata números para o padrão brasileiro (vírgula para decimais).
+ */
 export function formatBRNumber(val, decimals = 2) {
   const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : val;
   if (isNaN(num)) return '0,00';

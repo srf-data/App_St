@@ -20,7 +20,7 @@ export default function Fornecedores({
   const [fornToDelete, setFornToDelete] = useState(null);
 
   
-  
+  // Escape Key listener for Modais
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
@@ -33,7 +33,7 @@ export default function Fornecedores({
     return () => window.removeEventListener('keydown', handleEsc);
   }, [setIsAddModalOpen]);
 
-  
+  // Form States
   const [razaoSocial, setRazaoSocial] = useState('');
   const [fantasia, setFantasia] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -179,7 +179,7 @@ export default function Fornecedores({
       if (res.ok) {
         if (fetchFornecedores) await fetchFornecedores();
 
-        
+        // Limpeza visual de insumos vinculados
         const insumosToRemove = insumosList?.filter(i => 
           (i.fornecedor || '').toLowerCase().trim() === (fornToDelete.fantasia || '').toLowerCase().trim()
         ) || [];
@@ -228,7 +228,7 @@ export default function Fornecedores({
     <div className="flex h-full w-full flex-col p-4 sm:p-6 overflow-hidden anim-fade-in relative">
       <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
         <div className="min-w-[1020px] flex flex-col gap-2.5">
-          {}
+          {/* Table Header */}
           <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4 font-inter text-xs font-medium text-[#606060]">
             <div className="w-[80px] text-center">Código</div>
             <div className="flex-1 w-[auto] max-w-none text-left px-4">Razão Social</div>
@@ -240,7 +240,7 @@ export default function Fornecedores({
             <div className="w-[80px] text-center">Ações</div>
           </div>
 
-          {}
+          {/* List */}
           {paginatedFornecedores.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-[#F0F0F3] my-4 anim-fade-in gap-3">
               <div className="flex size-14 items-center justify-center rounded-full bg-[rgba(248,73,16,0.08)] text-[#F84910]">
@@ -284,7 +284,7 @@ export default function Fornecedores({
             ))
           )}
 
-          {}
+          {/* Footer Paginação */}
           <div className="flex h-[48px] w-full items-center justify-between border-t border-[#F0F0F3] px-2 pt-2 mt-2">
             <div className="font-inter text-xs font-medium text-[#606060]">
               {filteredFornecedores.length} registros encontrados. Página {currentPage} de {totalPages}
@@ -319,7 +319,7 @@ export default function Fornecedores({
           </div>
         </div>
 
-        {}
+        {/* CONFIRM DELETE MODAL */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => setShowDeleteModal(false)}>
             <div className="relative flex w-full max-w-[380px] flex-col items-center gap-5 rounded-xl border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300" onMouseDown={e => e.stopPropagation()}>
@@ -340,7 +340,7 @@ export default function Fornecedores({
           </div>
         )}
 
-        {}
+        {/* MODAL ADICIONAR / EDITAR */}
         {(isAddModalOpen || editingItem) && (
           <div 
             className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 anim-fade-in"

@@ -144,7 +144,7 @@ export default function Users({ onLogout, currentUser }) {
         return;
       }
       
-      const MAX_SIZE = 10 * 1024 * 1024; 
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
       if (file.size > MAX_SIZE) {
         setNotification({ 
           title: 'Arquivo Muito Grande', 
@@ -415,13 +415,13 @@ export default function Users({ onLogout, currentUser }) {
   ];
   return (
     <div className="flex min-h-screen bg-[#FDFDFE] md:bg-white overflow-hidden">
-      {}
+      {/* Transparent Spacer to keep layout flow */}
       <div className={`shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-[270px] max-[860px]:w-[88px]' : 'w-[88px]'}`} />
 
-      {}
+      {/* Sidebar */}
       <aside className={`fixed top-0 left-0 z-50 flex h-full flex-col justify-between border-r border-[#F0F0F3] bg-white py-4 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[270px] px-6 max-[860px]:shadow-2xl' : 'w-[88px] px-4'}`}>
 
-        {}
+        {/* Floating Toggle Arrow (on aside, outside overflow-hidden) */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{ WebkitTapHighlightColor: 'transparent', outline: 'none' }}
@@ -633,12 +633,41 @@ export default function Users({ onLogout, currentUser }) {
 
 
                     <div className="flex flex-col gap-6">
-                      {}
+                      {/* Primeira Linha: Nome, E-mail, Senha */}
                       <div className="flex w-full items-start justify-between px-2 gap-4">
                         <div className="w-[80px]" />
                         <div className="w-[75px] flex flex-col items-center">
                           <label className="block text-[10px] font-bold text-[#F84910] mb-2 uppercase">Foto</label>
-                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image}
+                          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+                          <button onClick={() => fileInputRef.current.click()} className="flex items-center justify-center p-0.5 rounded-lg shrink-0 w-[50px] h-[34px] border border-dashed border-[#F84910] hover:bg-[#F84910]/10 transition group overflow-hidden" title={newImage ? newImage.name : "Upload"}>
+                            {imagePreview ? (
+                              <img src={imagePreview} className="w-full h-full object-cover rounded" />
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F84910" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase">Nome Completo</label>
+                          <input type="text" placeholder="Nome" value={newNome} onChange={e => setNewNome(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.nome ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300`} />
+                          {formErrors.nome && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.nome}</p>}
+                        </div>
+
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase">E-mail</label>
+                          <input type="email" placeholder="E-mail" value={newEmail} onChange={e => setNewEmail(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.email ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-3 outline-none text-[#0D0D0D] font-medium focus:border-gray-300`} />
+                          {formErrors.email && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.email}</p>}
+                        </div>
+
+                        <div className="w-[120px]">
+                          <label className="block text-[10px] font-bold text-[#F84910] mb-2 ml-1 uppercase text-center">Senha</label>
+                          <input type="password" placeholder={editingUser ? "Manter atual" : "Senha"} value={newSenha} onChange={e => setNewSenha(e.target.value)} className={`w-full h-[36px] bg-white border ${formErrors.senha ? 'border-red-500' : 'border-[#F0F0F3]'} rounded-lg px-2 outline-none text-[#0D0D0D] text-center font-medium focus:border-gray-300`} />
+                          {formErrors.senha && <p className="text-[10px] text-red-500 mt-1 text-center">{formErrors.senha}</p>}
+                        </div>
+                      </div>
+
+                      {/* Segunda Linha: Confirmações */}
                       <div className="flex w-full items-start justify-between px-2 gap-4">
                         <div className="w-[80px]" />
                         <div className="w-[75px]" />
