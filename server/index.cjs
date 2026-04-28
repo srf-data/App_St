@@ -180,9 +180,9 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
-// Limite de Body Parser aumentado para 50MB
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Limite de Body Parser configurado para 10MB (ideal para fotos de produtos sem sobrecarregar o banco)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Aplicar Rate Limits
 app.use('/api/', globalLimiter);
