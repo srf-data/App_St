@@ -744,8 +744,8 @@ export default function Users({ onLogout, currentUser }) {
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 text-[#0D0D0D] truncate">{user.name || user.nome || '-'}</div>
                       <div className="flex-1 w-[auto] max-w-none text-left px-4 truncate">{user.email || '-'}</div>
                       <div className="w-[120px] text-center font-mono text-[10px] tracking-widest opacity-40">••••••••</div>
-                      <div className="w-[180px] text-center">{user.dataCad || '-'}</div>
-                      <div className="w-[180px] text-center">{user.ultimoAcc || '-'}</div>
+                      <div className="w-[180px] text-center">{user.dataCad ? new Date(user.dataCad).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                      <div className="w-[180px] text-center">{user.ultimoAcc ? new Date(user.ultimoAcc).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Nunca'}</div>
                       <div className="w-[60px] flex justify-center">
                         <button
                           onClick={() => handleOpenEditUser(user)}

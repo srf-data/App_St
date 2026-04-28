@@ -135,8 +135,8 @@ const mapUsuarioParaFrontend = (u) => ({
     email: u.email || '',
     senha: u.senha || '',
     foto: u.foto || null,
-    dataCad: u.Dt_Cadastro ? new Date(u.Dt_Cadastro).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-',
-    ultimoAcc: u.Ultimo_Acesso ? new Date(u.Ultimo_Acesso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Nunca'
+    dataCad: u.Dt_Cadastro || null,
+    ultimoAcc: u.Ultimo_Acesso || null
 });
 
 
