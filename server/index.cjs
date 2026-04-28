@@ -45,6 +45,7 @@ const calculatePropCost = (price, unitOrig, qty, unitUsed) => {
 };
 
 const app = express();
+app.set('trust proxy', 1); // Necessário para o Render e rate limiting
 const PORT = process.env.PORT || 3005;
 const JWT_SECRET = process.env.JWT_SECRET || 'solart_secret_key_123_dev_only';
 if (!process.env.JWT_SECRET) {
@@ -1509,7 +1510,13 @@ app.use((req, res) => {
         return res.status(404).json({ error: `Route ${req.url} not found` });
     }
     // Caso contrário, serve o index.html (para suporte a SPA routing)
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error('Erro ao servir index.html:', err);
+            res.status(500).send('Erro no servidor: Pasta "dist" não encontrada ou inacessível. Verifique se o build foi executado no Render.');
+        }
+    });
 });
 
 app.listen(PORT, '0.0.0.0', async () => {
