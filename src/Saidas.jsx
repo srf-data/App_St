@@ -522,24 +522,7 @@ export default function Saidas({ saidasList, setSaidasList, saidaInsumosList, se
                {editingSaida && (
                  <button 
                    onClick={() => {
-                     setDeleteAction(() => () => {
-                       if (activeTab === 'produtos') {
-                         const prod = produtosList.find(p => p.nome === editingSaida.produto);
-                         if (prod) {
-                           setProdutosList(produtosList.map(p => p.id === prod.id ? { ...p, qtd: p.qtd + (editingSaida.qtde || 0) } : p));
-                         }
-                         setSaidasList(saidasList.filter(s => s.id !== editingSaida.id));
-                       } else {
-                         const ins = insumosList.find(i => i.nome === editingSaida.nome);
-                         if (ins) {
-                           setInsumosList(insumosList.map(i => i.id === ins.id ? { ...i, estoqueAtual: i.estoqueAtual + (editingSaida.qtde || 0) } : i));
-                         }
-                         setSaidaInsumosList(saidaInsumosList.filter(s => s.id !== editingSaida.id));
-                       }
-                       setIsAddModalOpen(false);
-                       setEditingSaida(null);
-                       setShowDeleteModal(false);
-                     });
+                     setDeleteAction({ id: editingSaida.id, type: activeTab });
                      setShowDeleteModal(true);
                    }}
                    className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[rgba(186,0,0,0.1)] px-4 font-plus-jakarta text-sm font-semibold tracking-wide text-[#BA0000] hover:bg-[#BA0000] hover:text-white transition-fluid"

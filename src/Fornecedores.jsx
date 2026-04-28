@@ -398,7 +398,7 @@ export default function Fornecedores({
                     type="text" 
                     value={contato} 
                     onChange={e => setContato(maskPhone(e.target.value))} 
-                    placeholder="(00) 00000-0000 ou email@exemplo.com"
+                    placeholder="(00) 00000-0000 ou exemplo@gmail.com"
                     className="h-11 w-full rounded-lg border border-[#F0F0F3] bg-[#FAFAFA] px-4 font-inter text-sm outline-none focus:border-[#F84910] transition-fluid focus:shadow-sm" 
                   />
                 </div>
