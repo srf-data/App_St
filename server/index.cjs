@@ -145,13 +145,15 @@ const allowedOrigins = [
     'http://localhost:3005',
     'http://localhost:3000',
     'https://solart-app.onrender.com',
+    'https://studio-solart.onrender.com',
     process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Permitir se não houver origin (mesmo domínio) ou se estiver na lista
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+        // Permitir se não houver origin, se estiver na lista, se for IP local ou se for Render
+        const isLocalIp = origin && (origin.startsWith('http://192.168.') || origin.startsWith('http://10.') || origin.startsWith('http://172.'));
+        if (!origin || allowedOrigins.includes(origin) || isLocalIp || origin.endsWith('.onrender.com')) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Bloqueado para origem: ${origin}`);
