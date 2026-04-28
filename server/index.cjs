@@ -1500,7 +1500,17 @@ app.delete('/api/saidas/insumos/:id', authenticateToken, async (req, res) => {
 });
 
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../dist')));
+// Servir arquivos estáticos da pasta dist
+const distPath = fs.existsSync(path.join(__dirname, '../dist')) 
+    ? path.join(__dirname, '../dist') 
+    : path.join(__dirname, 'dist');
+
+console.log(`[Static] Servindo arquivos de: ${distPath}`);
+if (!fs.existsSync(distPath)) {
+    console.warn(`[WARNING] Pasta dist não encontrada em: ${distPath}`);
+}
+
+app.use(express.static(distPath));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
@@ -1510,11 +1520,11 @@ app.use((req, res) => {
         return res.status(404).json({ error: `Route ${req.url} not found` });
     }
     // Caso contrário, serve o index.html (para suporte a SPA routing)
-    const indexPath = path.join(__dirname, '../dist/index.html');
+    const indexPath = path.join(distPath, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
-            console.error('Erro ao servir index.html:', err);
-            res.status(500).send('Erro no servidor: Pasta "dist" não encontrada ou inacessível. Verifique se o build foi executado no Render.');
+            console.error(`Erro ao servir index.html em ${indexPath}:`, err.message);
+            res.status(500).send(`Erro no servidor: Arquivo index.html não encontrado em ${indexPath}. Verifique se o build foi executado com sucesso no Render.`);
         }
     });
 });
