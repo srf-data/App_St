@@ -258,7 +258,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
   const handleOpenEdit = (entrada) => {
     setEditingEntrada(entrada);
     setFormErrors({});
-    setActiveTab(activeMainTab); // Lock the modal to current list context
+    setActiveTab(activeMainTab); 
     if (activeMainTab === 'produtos') {
       const prod = produtosList.find(p => p.nome === entrada.razao);
       setEntradaProdutoId(prod ? prod.id : '');
@@ -286,7 +286,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
     <>
       <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
 
-        {/* Tabs */}
+        {}
         <div className="flex gap-4 mb-4 border-b border-[#F0F0F3] px-2 mt-2">
           <button
             onClick={() => setActiveMainTab('produtos')}
@@ -303,7 +303,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
         </div>
 
         <div className="min-w-[1020px] flex flex-col gap-2.5">
-          {/* Table Header */}
+          {}
           <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-2 font-inter text-xs font-medium text-[#606060]">
             <div className="w-[80px] text-center">Código</div>
             <div className="flex-1 w-[auto] max-w-none text-left px-4">Nome do Produto</div>
@@ -317,7 +317,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
             <div className="w-[80px] text-center">Ações</div>
           </div>
 
-          {/* Table Body */}
+          {}
           <div className="flex flex-col gap-[2px]">
             {paginatedEntradas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-[#F0F0F3] my-4 anim-fade-in gap-3">
@@ -370,7 +370,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
             )}
           </div>
 
-          {/* Footer Pagination */}
+          {}
           <div className="flex h-[48px] w-full items-center justify-between border-t border-[#F0F0F3] px-2 pt-2 mt-2">
             <div className="font-inter text-xs font-medium text-[#606060]">
               {filteredEntradas.length} registros encontrados. Página {currentPage} de {totalPages}
@@ -414,7 +414,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
             onMouseDown={(e) => e.stopPropagation()}
           >
 
-            {/* Modal Header */}
+            {}
             <div className="mb-4 flex flex-col gap-4 border-b border-[#F0F0F3] pb-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-plus-jakarta text-lg font-bold text-[#0D0D0D]">
@@ -431,7 +431,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                 </button>
               </div>
 
-              {/* Tabs */}
+              {}
               <div className="flex gap-4 px-2">
                 <button
                   onClick={() => setActiveTab('produtos')}
@@ -495,7 +495,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                     <button
                       onClick={() => {
                         setDeleteAction(() => () => {
-                          // REMOÇÃO PERMANENTE DO PRODUTO (Conforme solicitado)
+                          
                           setProdutosList(produtosList.filter(p => p.nome !== editingEntrada.razao));
                           setEntradasList(entradasList.filter(e => e.id !== editingEntrada.id));
                           setIsAddModalOpen(false);
@@ -527,7 +527,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
             ) : (
               <div className="flex flex-col gap-6">
 
-                {/* Supplier Search Wrapper */}
+                {}
                 <div className="mb-6 flex gap-4">
                   <div className="flex w-full flex-col gap-1.5">
                     <label className="font-inter text-xs font-medium text-[#606060] px-1">Fornecedor (Nome de Fantasia)</label>
@@ -557,11 +557,11 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                   </div>
                 </div>
 
-                {/* Inner Table "Receita" */}
+                {}
                 <div className="mb-4 flex flex-col rounded-lg border border-[#F0F0F3] bg-white p-3">
                   <h3 className="mb-3 px-2 font-plus-jakarta text-md font-bold text-[#0D0D0D]">Receita (Lista de Insumos)</h3>
 
-                  {/* Inner Table Header */}
+                  {}
                   <div className="flex h-[36px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4">
                     <div className="w-[40px] text-center font-inter text-xs font-medium text-[#606060]">Cód.</div>
                     <div className="w-[140px] text-left font-inter text-xs font-medium text-[#606060]">Insumo</div>
@@ -573,7 +573,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                     <div className="w-[100px] text-center font-inter text-xs font-medium text-[#606060]">Ações</div>
                   </div>
 
-                  {/* Added Insumos */}
+                  {}
                   <div className="mt-2 flex max-h-[160px] flex-col gap-2 overflow-y-auto">
                     {insumosAdicionados.map((insumo, idx) => (
                       <div key={insumo.id} className="flex h-[40px] w-full items-center justify-between rounded bg-white px-4 hover:bg-slate-50 transition border-b border-[#F0F0F3] last:border-0">
@@ -591,7 +591,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                               const newStatus = e.target.value;
                               setInsumosAdicionados(insumosAdicionados.map(i => {
                                 if (i.id === insumo.id) return { ...i, acaoPreco: newStatus };
-                                // Se estiver definido 'atualizar', os outros itens DO MESMO INSUMO devem ser resetados para 'novo'
+                                
                                 if (newStatus === 'atualizar' && i.nome.toLowerCase() === insumo.nome.toLowerCase()) return { ...i, acaoPreco: 'novo' };
                                 return i;
                               }));
@@ -622,7 +622,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                     )}
                   </div>
 
-                  {/* Add New Insumo Row (Autocomplete feature) */}
+                  {}
                   <div className="mt-4 flex flex-col gap-2 rounded-lg bg-[rgba(240,240,243,0.5)] p-3">
                     <div className="flex gap-2 items-end">
                       <div className="flex flex-1 flex-col gap-1">
@@ -644,7 +644,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                         </select>
                       </div>
 
-                      {/* Supplier is now global, hiding redundant input */}
+                      {}
                       <div className="flex w-[80px] flex-col gap-1">
                         <label className="font-inter text-[10px] font-medium text-[#606060]">Tamanho Emb.</label>
                         <input
@@ -694,13 +694,13 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
                   </div>
                 </div>
 
-                {/* Modal Footer Actions */}
+                {}
                 <div className="mt-4 flex w-full justify-between gap-3 px-2">
                   {editingEntrada && (
                     <button
                       onClick={() => {
                         setDeleteAction(() => () => {
-                          // REMOÇÃO PERMANENTE DO INSUMO (Conforme solicitado)
+                          
                           setInsumosList(insumosList.filter(i => i.nome !== editingEntrada.razao));
                           setEntradasList(entradasList.filter(e => e.id !== editingEntrada.id));
                           setIsAddModalOpen(false);
@@ -736,7 +736,7 @@ export default function Entradas({ entradasList, setEntradasList, produtosList, 
         </div>
       )}
 
-      {/* CONFIRM DELETE MODAL */}
+      {}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => { setShowDeleteModal(false); setDeleteAction(null); setInsumoToRemoveId(null); }}>
           <div className="relative flex w-full max-w-[380px] flex-col items-center gap-5 rounded-xl border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300" onMouseDown={e => e.stopPropagation()}>

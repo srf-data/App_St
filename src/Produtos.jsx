@@ -41,7 +41,7 @@ export default function Produtos({
 
   const [precoVenda, setPrecoVenda] = useState('0');
   const [comissaoPorcentagem, setComissaoPorcentagem] = useState('0');
-  const [lucroPorcentagem, setLucroPorcentagem] = useState('120'); // Valor padrão 120%
+  const [lucroPorcentagem, setLucroPorcentagem] = useState('120'); 
 
   const unidadesBase = {
     'ml': 1, 'ml.': 1, 'mililitro': 1, 'mililitros': 1,
@@ -73,7 +73,7 @@ export default function Produtos({
 
   const availableUnits = getCompatibleUnits(insumosList.find(i => i.id.toString() === curInsumoId)?.unidade);
 
-  // Notification State
+  
 
   const [formErrors, setFormErrors] = useState({});
 
@@ -161,8 +161,8 @@ export default function Produtos({
   };
 
   useEffect(() => {
-    // Se estivermos editando e o preço já veio do banco (seja por vendaNum ou string),
-    // respeitamos o valor do banco e não sobrescrevemos.
+    
+    
     const rawVenda = editingProduto ? String(editingProduto.venda || '0') : '0';
     const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
     const savedPrice = editingProduto?.vendaNum || parsedVenda;
@@ -173,8 +173,8 @@ export default function Produtos({
        return; 
     }
 
-    // Se o usuário já alterou o preço manualmente, não queremos sobrescrever.
-    // O useEffect só deve agir se o preço atual ainda for o "padrão" ou zero.
+    
+    
     const calculated = calculatePriceFromProfit(lucroPorcentagem, comissaoPorcentagem, currentCustoProducao);
     if (calculated > 0) {
       setPrecoVenda(calculated.toFixed(2));
@@ -233,7 +233,7 @@ export default function Produtos({
           const newList = [...insumosAdicionados];
           const item = newList[existingIdx];
           
-          // Converter a nova quantidade para a unidade que já está na lista
+          
           const factorUsadoAgora = getFactor(usageUnit);
           const factorExistente = getFactor(item.unidade);
           const requestedInExistingUnit = (requestedQtde * factorUsadoAgora) / factorExistente;
@@ -251,7 +251,7 @@ export default function Produtos({
             ...insumo, 
             qtde: requestedQtde, 
             unidade: usageUnit, 
-            custoUnitario: selectedPrice, // Agora guardamos o preço BRUTO por pacote (L, kg, etc)
+            custoUnitario: selectedPrice, 
             valorProporcional: proportionalCost,
             originalUnit: insumo.unidade
           }]);
@@ -266,7 +266,7 @@ export default function Produtos({
     const newQtde = item.qtde + delta;
     if (newQtde <= 0) return;
     
-    // Pegamos os dados ATUAIS do insumo da lista global para garantir o estoque mais recente
+    
     const insumoReal = insumosList.find(i => i.id.toString() === item.id.toString());
     const estoqueAtualReal = insumoReal ? insumoReal.estoqueAtual : (item.estoqueAtual || 0);
 
@@ -380,7 +380,7 @@ export default function Produtos({
       console.error(e);
       setNotification({ title: 'Erro', message: cleanNotificationMessage(e.message) || 'Falha na comunicação com o servidor', type: 'error' });
       setLoading(false);
-      return; // Do not clear the form on error
+      return; 
     } finally {
       setLoading(false);
     }
@@ -443,7 +443,7 @@ export default function Produtos({
     setQtdeInicial(produto.qtd || 0);
     setInsumosAdicionados(produto.insumos || []); 
     
-    // Tenta pegar o valor numérico, se não conseguir, limpa a string do preço
+    
     const rawVenda = String(produto.venda || '0');
     const parsedVenda = parseFloat(rawVenda.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0;
     const savedVendaNum = produto.vendaNum || parsedVenda;
@@ -454,7 +454,7 @@ export default function Produtos({
     setComissaoPorcentagem(String(savedComissao));
     setPrecoVenda(String(savedVendaNum));
     
-    // Calcular o lucro % atual baseado no preço e custo salvos
+    
     const currentCost = getDynamicCostNum(produto);
     const profit = calculateProfitFromPrice(savedVendaNum, savedComissao, currentCost);
     setLucroPorcentagem(profit.toFixed(2));
@@ -467,7 +467,7 @@ export default function Produtos({
   return (
     <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
       
-      {/* Active Filter Badge */}
+      {}
       {dashboardFilter === 'hoje' && (
         <div className="flex items-center gap-3 px-2 mb-1 animate-in slide-in-from-left duration-300">
            <div className="flex items-center gap-2 rounded-full bg-[rgba(54,186,111,0.1)] px-3 py-1 border border-[rgba(54,186,111,0.2)]">
@@ -480,7 +480,7 @@ export default function Produtos({
       )}
 
       <div className="min-w-[1120px] flex flex-col gap-2.5">
-        {/* Table Header */}
+        {}
         <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4 font-inter text-xs font-medium text-[#606060]">
           <div className="w-[80px] text-center">Código</div>
           <div className="flex-1 w-[auto] max-w-none text-left px-4">Nome do Produto</div>
@@ -493,7 +493,7 @@ export default function Produtos({
           <div className="w-[80px] text-center">Ações</div>
         </div>
 
-        {/* List of Products */}
+        {}
         {paginatedProdutos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-[#F0F0F3] my-4 anim-fade-in gap-3">
             <div className="flex size-14 items-center justify-center rounded-full bg-[rgba(248,73,16,0.08)] text-[#F84910]">
@@ -587,7 +587,7 @@ export default function Produtos({
           })
         )}
 
-        {/* Footer Paginação */}
+        {}
         <div className="flex h-[48px] w-full items-center justify-between border-t border-[#F0F0F3] px-2 pt-2 mt-2">
           <div className="font-inter text-xs font-medium text-[#606060]">
             {sortedProdutos.length} registros encontrados. Página {currentPage} de {totalPages}
@@ -622,7 +622,7 @@ export default function Produtos({
         </div>
       </div>
 
-      {/* CONFIRM DELETE MODAL */}
+      {}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => setShowDeleteModal(false)}>
           <div className="relative flex w-full max-w-[380px] flex-col items-center gap-5 rounded-xl border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300" onMouseDown={e => e.stopPropagation()}>
@@ -650,7 +650,7 @@ export default function Produtos({
         </div>
       )}
 
-      {/* DETALHES MODAL */}
+      {}
       {selectedProduto && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 anim-fade-in"
@@ -723,7 +723,7 @@ export default function Produtos({
         </div>
       )}
 
-      {/* ADD / EDIT MODAL */}
+      {}
       {(isAddModalOpen || editingProduto) && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 text-left"
@@ -879,7 +879,7 @@ export default function Produtos({
               <h4 className="font-plus-jakarta text-base font-bold text-[#0D0D0D]">Precificação Inteligente</h4>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[rgba(248,73,16,0.03)] p-5 rounded-xl border border-[rgba(248,73,16,0.08)]">
-                {/* Custo de Produção (Leitura) */}
+                {}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-[#606060] uppercase">Custo de Produção</label>
                   <div className="h-11 flex items-center px-4 bg-white border border-[#F0F0F3] rounded-lg font-inter font-bold text-[#0D0D0D]">
@@ -887,7 +887,7 @@ export default function Produtos({
                   </div>
                 </div>
 
-                {/* Comissão (%) */}
+                {}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-[#606060] uppercase">Comissão (%)</label>
                   <div className="relative">
@@ -904,7 +904,7 @@ export default function Produtos({
                   </span>
                 </div>
 
-                {/* Lucro Líquido (%) */}
+                {}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-[#606060] uppercase">Lucro Desejado (%)</label>
                   <div className="relative">
@@ -918,7 +918,7 @@ export default function Produtos({
                   </div>
                 </div>
 
-                {/* Preço de Venda (Editável e Calculado) */}
+                {}
                 <div className="flex flex-col gap-1 sm:col-span-2">
                   <label className="text-[11px] font-bold text-[#606060] uppercase">Preço de Venda Final</label>
                   <div className="relative">
@@ -933,7 +933,7 @@ export default function Produtos({
                   </div>
                 </div>
 
-                {/* Lucro em R$ (Visualização) */}
+                {}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-[#606060] uppercase">Lucro Líquido (R$)</label>
                   <div className="h-12 flex items-center justify-center bg-[#36BA6F] rounded-lg font-inter text-lg font-black text-white shadow-md">

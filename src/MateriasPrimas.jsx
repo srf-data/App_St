@@ -217,7 +217,7 @@ export default function MateriasPrimas({
         return;
       }
 
-      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      const MAX_SIZE = 10 * 1024 * 1024; 
       if (file.size > MAX_SIZE) {
         setNotification({ 
           title: 'Arquivo Muito Grande', 
@@ -242,7 +242,7 @@ export default function MateriasPrimas({
     setFornecedorId(foundForn ? String(foundForn.id) : '');
     setUnidade(item.unidade); 
     
-    // Restaurar preço e tamanho da embalagem ou fallback para custo unitário
+    
     setCusto(item.precoEmbalagem ? item.precoEmbalagem.toString().replace('.', ',') : item.custoUnitario.toString().replace('.', ','));
     setTamanhoEmbalagem(item.tamanhoEmbalagem ? item.tamanhoEmbalagem.toString() : "1");
     
@@ -263,7 +263,7 @@ export default function MateriasPrimas({
   return (
     <div className="flex w-full flex-col gap-2.5 rounded-lg border border-[#F0F0F3] bg-white p-2.5 shadow-[0_0_20px_rgba(139,139,139,0.03)] transition-all overflow-x-auto table-scrollbar relative">
       
-      {/* Filter Badge */}
+      {}
       {filterConfig && (
         <div className="flex items-center gap-3 px-2 mb-1 animate-in slide-in-from-left duration-300">
            <div className={`flex items-center gap-2 rounded-full px-3 py-1 border`} style={{ backgroundColor: filterConfig.bg, borderColor: filterConfig.color + '33' }}>
@@ -280,7 +280,7 @@ export default function MateriasPrimas({
       )}
 
       <div className="min-w-[1020px] flex flex-col gap-2.5">
-        {/* Table Header */}
+        {}
         <div className="flex h-[35px] w-full items-center justify-between rounded-lg bg-[rgba(215,215,215,0.2)] px-4 font-inter text-xs font-medium text-[#606060]">
           <div className="w-[80px] text-center">Código</div>
           <div className="flex-1 w-[auto] max-w-none text-left px-4">Matéria-Prima</div>
@@ -292,7 +292,7 @@ export default function MateriasPrimas({
           <div className="w-[80px] text-center">Ações</div>
         </div>
 
-        {/* List of Materials */}
+        {}
         {paginatedInsumos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-lg border border-[#F0F0F3] my-4 anim-fade-in gap-3">
             <div className="flex size-14 items-center justify-center rounded-full bg-[rgba(248,73,16,0.08)] text-[#F84910]">
@@ -384,7 +384,7 @@ export default function MateriasPrimas({
           })
         )}
 
-        {/* Footer Paginação */}
+        {}
         <div className="flex h-[48px] w-full items-center justify-between border-t border-[#F0F0F3] px-2 pt-2 mt-2">
           <div className="font-inter text-xs font-medium text-[#606060]">
             {sortedInsumos.length} registros encontrados. Página {currentPage} de {totalPages}
@@ -419,7 +419,7 @@ export default function MateriasPrimas({
         </div>
       </div>
 
-      {/* CONFIRM DELETE MODAL */}
+      {}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in" onMouseDown={() => setShowDeleteModal(false)}>
           <div className="relative flex w-full max-w-[380px] flex-col items-center gap-5 rounded-xl border border-[#F0F0F3] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300" onMouseDown={e => e.stopPropagation()}>
@@ -440,7 +440,7 @@ export default function MateriasPrimas({
         </div>
       )}
 
-      {/* PRICE HISTORY MODAL */}
+      {}
       {historyItem && (
         <div 
           className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in text-left"
@@ -479,7 +479,7 @@ export default function MateriasPrimas({
         </div>
       )}
 
-      {/* ADD / EDIT MODAL */}
+      {}
       {(isAddModalOpen || editingItem) && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-[2px] p-4 anim-fade-in"
@@ -490,7 +490,7 @@ export default function MateriasPrimas({
             onMouseDown={e => e.stopPropagation()}
           >
 
-            {/* Header */}
+            {}
             <div className="flex h-[40px] w-full items-center justify-between border-b border-[#F0F0F3] pb-2">
               <div className="flex items-center gap-2">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-[rgba(248,73,16,0.1)] text-[#F84910]">
@@ -516,7 +516,7 @@ export default function MateriasPrimas({
               </button>
             </div>
 
-            {/* Inputs Grid */}
+            {}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-2">
                 <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Nome da Matéria-Prima</label>
@@ -619,27 +619,7 @@ export default function MateriasPrimas({
               <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-2">
                 <label className="font-plus-jakarta text-xs font-semibold text-[#606060]">Foto da Matéria-Prima</label>
                 <div className="flex items-center gap-4">
-                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
-                  <button 
-                    onClick={() => fileInputRef.current.click()}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#F0F0F3] bg-[#FAFAFA] text-[#606060] transition-fluid hover:border-[#F84910] hover:text-[#F84910]"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <span>{imagem ? imagem.name : 'Selecionar Imagem'}</span>
-                  </button>
-                  {imagePreview && (
-                    <div className="relative size-11 rounded-lg border border-[#F0F0F3] overflow-hidden group">
-                      <img src={imagePreview} className="size-full object-cover" />
-                      <button onClick={() => { setImagem(null); setImagePreview(null); }} className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition">
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer / Save */}
+                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image}
             <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#F0F0F3]">
               <div>
                 {editingItem && (
@@ -680,7 +660,7 @@ export default function MateriasPrimas({
         </div>
       )}
 
-      {/* PRICE HISTORY MODAL */}
+      {}
       {historyItem && (
         <div 
           className="fixed inset-0 z-[150] flex items-center justify-center bg-[rgba(39,13,4,0.15)] backdrop-blur-sm p-4 anim-fade-in text-left"
@@ -719,7 +699,7 @@ export default function MateriasPrimas({
         </div>
       )}
 
-      {/* LIGHTBOX MODAL */}
+      {}
       {zoomedImage && (
         <div 
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300"

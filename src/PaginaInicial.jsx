@@ -3,8 +3,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export default function PaginaInicial({ produtos = [], insumos = [], entradas = [], saidas = [], saidasInsumos = [], onNavigate }) {
   const [tab, setTab] = useState('Semana');
-  const [chartTypeFilter, setChartTypeFilter] = useState('produtos'); // 'produtos' ou 'insumos'
-  const [customDay, setCustomDay] = useState(''); // 'YYYY-MM-DD'
+  const [chartTypeFilter, setChartTypeFilter] = useState('produtos'); 
+  const [customDay, setCustomDay] = useState(''); 
   const [showMenuInvestimento, setShowMenuInvestimento] = useState(false);
   const [filtroInvestimento, setFiltroInvestimento] = useState('Semana');
 
@@ -87,7 +87,7 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
   const todayStr = new Date().toLocaleDateString('pt-BR');
   const totalItensHoje = [...produtos, ...insumos].filter(item => {
     if (!item.dataCad) return false;
-    // Handle both YYYY-MM-DD and DD/MM/YYYY
+    
     if (item.dataCad.includes('-')) {
       const [y, m, d] = item.dataCad.split('-');
       return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}` === todayStr;
@@ -101,7 +101,7 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
   const getInvestStats = () => {
     const range = customDay ? 'CustomDay' : filtroInvestimento;
     
-    // Investimento: Entradas de Insumos no período (Compras de Matéria-prima)
+    
     const investTotal = entradas
       .filter(e => e.fornecedor !== 'Produção Própria')
       .filter(e => isInRange(e.entrada, range))
@@ -110,15 +110,15 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
         return sum + val;
       }, 0);
 
-    // Lucro Real = Vendas (Faturamento) - Custo de Produção daqueles itens
+    
     const lucroTotal = saidas
       .filter(s => isInRange(s.data, range))
       .reduce((sum, s) => {
         const totalVenda = parseFloat(String(s.total).replace('R$', '').replace('.', '').replace(',', '.')) || 0;
         
-        // Buscar o produto para saber o custo de produção dele
+        
         const prod = produtos.find(p => p.id === s.produtoId);
-        // O campo 'custo' no frontend vem formatado como "R$ 10,00", precisamos limpar
+        
         const custoUnitario = prod ? parseFloat(String(prod.custo).replace('R$', '').replace('.', '').replace(',', '.')) : 0;
         const custoTotalProducao = (Number(s.qtde) || 0) * custoUnitario;
         
@@ -138,14 +138,14 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
   const getChartData = () => {
     const range = customDay ? 'CustomDay' : tab;
     
-    // Entradas de Produtos (Produção)
+    
     const entProd = entradas.filter(e => e.fornecedor === 'Produção Própria' && isInRange(e.entrada, range));
-    // Entradas de Insumos (Compras)
+    
     const entIns = entradas.filter(e => e.fornecedor !== 'Produção Própria' && isInRange(e.entrada, range));
     
-    // Saídas de Produtos (Vendas)
+    
     const saiProd = saidas.filter(s => isInRange(s.data, range));
-    // Saídas de Insumos (Baixas Manuais)
+    
     const saiInsMan = saidasInsumos.filter(s => isInRange(s.data, range));
 
     const getVal = (item) => {
@@ -154,7 +154,7 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
     };
 
     const getInsumoManualExitCost = (s) => {
-      // Se tiver valor salvo, usa. Senão, busca o custo unitário atual do insumo pelo nome
+      
       const v = getVal(s);
       if (v > 0) return v;
       const ins = insumos.find(i => i.nome === s.produto || i.nome === s.nome);
@@ -169,16 +169,16 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
       finalEntradas = entProd;
       finalSaidas = saiProd;
     } else {
-      // Para Insumos: 
-      // Entrada = Compras
-      // Saída = Baixas Manuais + Custo Consumido na Produção (que é o 'total' das entradas de produtos)
+      
+      
+      
       finalEntradas = entIns;
       finalSaidas = [...saiInsMan, ...entProd]; 
     }
 
     const processItem = (item, isAltInsExit = false) => {
       if (chartTypeFilter === 'insumos' && !item.fornecedor && !isAltInsExit) {
-        // É uma saída manual de insumo
+        
         return getInsumoManualExitCost(item);
       }
       return getVal(item);
@@ -240,7 +240,7 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
       return result;
     }
 
-    // Mês
+    
     const result = [
       { name: 'Sem 1', entradas: 0, saidas: 0 },
       { name: 'Sem 2', entradas: 0, saidas: 0 },
@@ -271,7 +271,7 @@ const CustomAreaTooltip = ({ active, payload, label }) => {
   return (
     <div className="flex w-full flex-col gap-6 animate-in fade-in duration-500">
       
-      {/* Resumo - Cards */}
+      {}
       <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
         <div className="flex flex-col justify-between rounded-lg border border-[#F0F0F3] bg-white p-6 shadow-[0_0_20px_rgba(139,139,139,0.03)] min-h-[143px]">
           <div className="flex items-center gap-2.5">
