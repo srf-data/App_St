@@ -201,7 +201,7 @@ function App() {
                   <span className="relative top-2 inline-flex h-16 min-w-16 rotate-[-2deg]">
                     <img src={iconeBox} alt="" className="absolute inset-0 h-full w-full" />
                   </span>
-                  <span>Produço</span>
+                  <span>Produção</span>
                 </span>
                 <span className="block">com Inteligência</span>
               </h1>
