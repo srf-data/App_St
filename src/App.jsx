@@ -201,14 +201,14 @@ function App() {
                   <span className="relative top-2 inline-flex h-16 min-w-16 rotate-[-2deg]">
                     <img src={iconeBox} alt="" className="absolute inset-0 h-full w-full" />
                   </span>
-                  <span>Producao</span>
+                  <span>Produço</span>
                 </span>
-                <span className="block">com Inteligencia</span>
+                <span className="block">com Inteligência</span>
               </h1>
             </div>
 
             <p className="font-inter text-lg font-medium leading-normal text-[#5f5f5f]">
-              Sistema de controle de estoque e precificacao para producao artesanal.
+              Sistema de controle de estoque e precificação para produção artesanal.
             </p>
           </div>
         </div>
